@@ -716,33 +716,33 @@
       }
     }
 
-    function bunyikanAlarmPelanggaran() {
-      //hentikannyaAlarm();
-      //initAudioAlarm();
+    // function bunyikanAlarmPelanggaran() {
+    //   //hentikannyaAlarm();
+    //   //initAudioAlarm();
 
-      const mainkanNada = () => {
-        try {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'sawtooth';
-          osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-          osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.4);
-          gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.45);
+    //   const mainkanNada = () => {
+    //     try {
+    //       const osc = audioCtx.createOscillator();
+    //       const gain = audioCtx.createGain();
+    //       osc.type = 'sawtooth';
+    //       osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    //       osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.4);
+    //       gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+    //       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+    //       osc.connect(gain);
+    //       gain.connect(audioCtx.destination);
+    //       osc.start();
+    //       osc.stop(audioCtx.currentTime + 0.45);
 
-          if (navigator.vibrate) {
-            navigator.vibrate([400, 100, 400]);
-          }
-        } catch (e) {}
-      };
+    //       if (navigator.vibrate) {
+    //         navigator.vibrate([400, 100, 400]);
+    //       }
+    //     } catch (e) {}
+    //   };
 
-      mainkanNada();
-      alarmInterval = setInterval(mainkanNada, 700);
-    }
+    //   mainkanNada();
+    //   alarmInterval = setInterval(mainkanNada, 700);
+    // }
 
     function hentikannyaAlarm() {
       if (alarmInterval) {
