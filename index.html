@@ -606,6 +606,30 @@
     }
 
     // ==================== 3. DASHBOARD SISWA & JADWAL UJIAN ====================
+   // Helper format tanggal menjadi "Rabu, 18 November 2026"
+    function formatTanggalID(tglStr) {
+      if (!tglStr) return '-';
+      const d = new Date(tglStr);
+      if (isNaN(d.getTime())) return tglStr; // Jika sudah teks biasa, langsung tampilkan
+      return d.toLocaleDateString('id-ID', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
+
+
+    function formatJamID(jamStr) {
+      if (!jamStr) return '-';
+  
+      if (/^\d{1,2}:\d{2}$/.test(jamStr.trim())) return jamStr.trim();
+      const d = new Date(jamStr);
+      if (isNaN(d.getTime())) return jamStr;
+      const jam = String(d.getHours()).padStart(2, '0');
+      const menit = String(d.getMinutes()).padStart(2, '0');
+      return `${jam}:${menit}`;
+    }
     function setupHalamanSiswa() {
       document.getElementById('view-siswa').classList.remove('hidden');
       document.getElementById('student-dashboard-screen').classList.remove('hidden');
@@ -652,8 +676,8 @@
               </div>
               <h3 class="text-lg font-bold text-slate-900">${u.mapel}</h3>
               <div class="mt-3 space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <p>📅 <b>Tanggal:</b> ${u.tanggal}</p>
-                <p>⏰ <b>Waktu Mulai:</b> ${u.jam} WIB (${u.durasi} Menit)</p>
+                <p>📅 <b>Tanggal:</b> ${formatTanggalID(u.tanggal)}</p>
+                <p>⏰ <b>Waktu Mulai:</b> ${formatJamID(u.jam)} WIB (${u.durasi} Menit)</p>
                 <p>🛡️ <b>Toleransi Pelanggaran:</b> Maksimal ${u.batasPelanggaran}x</p>
               </div>
             </div>
