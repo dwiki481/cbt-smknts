@@ -195,14 +195,53 @@
   </div>
 
   <!-- 3. RUANG UJIAN SISWA -->
-  <div id="view-siswa" class="hidden min-h-screen flex flex-col bg-slate-900 text-white no-select">
-    <div id="pre-exam-screen" class="flex-grow flex items-center justify-center p-4">
+<!-- ==================== 3. RUANG UJIAN SISWA ==================== -->
+  <div id="view-siswa" class="hidden min-h-screen flex flex-col bg-slate-100 text-slate-800 no-select">
+    
+    <!-- LAYAR 1: DASHBOARD JADWAL UJIAN SISWA -->
+    <div id="student-dashboard-screen" class="flex-grow flex flex-col">
+      <!-- Header Siswa -->
+      <header class="bg-blue-800 text-white px-6 py-4 shadow flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <img src="logo-smk.png" alt="Logo" class="w-10 h-10 object-contain bg-white rounded-lg p-1" onerror="this.style.display='none'">
+          <div>
+            <h1 class="font-bold text-base sm:text-lg leading-tight">Portal Peserta Ujian</h1>
+            <p id="dash-siswa-info" class="text-xs text-blue-200">Memuat data siswa...</p>
+          </div>
+        </div>
+        <button onclick="location.reload()" class="bg-red-600 hover:bg-red-700 px-3.5 py-2 rounded-lg text-xs font-bold shadow">
+          Keluar
+        </button>
+      </header>
+
+      <!-- Konten Daftar Ujian -->
+      <main class="max-w-5xl w-full mx-auto p-6 flex-grow space-y-6">
+        <!-- Banner Info -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Jadwal Ujian Kelas <span id="dash-kelas-badge" class="text-blue-600">...</span></h2>
+            <p class="text-xs text-slate-500 mt-0.5">Silakan pilih mata pelajaran yang berstatus <b>Siap Dikerjakan</b> sesuai jadwal yang ditentukan pengawas.</p>
+          </div>
+          <div class="bg-amber-50 border border-amber-200 text-amber-800 px-3.5 py-2 rounded-xl text-xs font-semibold">
+            ⚠️ Pastikan volume HP aktif & mode senyap dimatikan
+          </div>
+        </div>
+
+        <!-- Grid Kartu Jadwal Ujian -->
+        <div id="grid-jadwal-ujian" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- Kartu ujian akan dirender lewat JavaScript -->
+        </div>
+      </main>
+    </div>
+
+    <!-- LAYAR 2: PERSIAPAN & PERATURAN FULLSCREEN -->
+    <div id="pre-exam-screen" class="hidden flex-grow flex items-center justify-center p-4 bg-slate-900 text-white">
       <div class="bg-slate-800 border border-slate-700 p-8 rounded-2xl max-w-lg w-full text-center shadow-2xl">
         <span class="bg-amber-500/20 text-amber-400 border border-amber-500/40 px-3 py-1 rounded-full text-xs font-bold">
           MODE PENGAWASAN KETAT AKTIF
         </span>
-        <h2 id="prep-ujian-nama" class="text-2xl font-bold mt-4">Ujian</h2>
-        <p id="prep-ujian-detail" class="text-slate-400 text-sm mt-1">Detail</p>
+        <h2 id="prep-ujian-nama" class="text-2xl font-bold mt-4">Nama Ujian</h2>
+        <p id="prep-ujian-detail" class="text-slate-400 text-sm mt-1">Mapel • Kelas • Durasi</p>
 
         <div class="bg-slate-900/80 p-4 rounded-xl text-left text-xs text-slate-300 space-y-2 my-6 border border-slate-700">
           <p class="font-bold text-white">Peraturan Ujian:</p>
@@ -212,13 +251,19 @@
           <p>4. Pada pelanggaran ke-3, <b>akun Anda otomatis dinonaktifkan</b> dan ujian terkunci.</p>
         </div>
 
-        <button onclick="mulaiUjianFullscreen()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3.5 rounded-xl shadow-lg transition">
-          MASUK LAYAR PENUH & MULAI UJIAN
-        </button>
+        <div class="flex gap-3">
+          <button onclick="batalPilihUjian()" class="w-1/3 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3.5 rounded-xl transition text-xs">
+            &larr; Kembali
+          </button>
+          <button onclick="mulaiUjianFullscreen()" class="w-2/3 bg-green-600 hover:bg-green-500 text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm">
+            MASUK LAYAR PENUH & MULAI
+          </button>
+        </div>
       </div>
     </div>
 
-    <div id="active-exam-screen" class="hidden flex-col h-screen">
+    <!-- LAYAR 3: AKTIF GOOGLE FORM (PROCTORING) -->
+    <div id="active-exam-screen" class="hidden flex-col h-screen bg-slate-900 text-white">
       <div class="bg-slate-950 px-4 py-2.5 flex justify-between items-center border-b border-slate-800 text-xs">
         <div class="flex items-center gap-4">
           <span class="font-bold text-blue-400" id="exam-header-siswa">Siswa</span>
@@ -309,27 +354,40 @@
     </div>
   </div>
 
-  <script>
+ <script>
     // ================= KONFIGURASI BACKEND =================
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwE9QLRwfqCyTRIVjJ1N3Oszp0BYqxl3y3oyvf5vkU2T84YxcwRgrAp-aJ2IhcK2vZoOg/exec"; 
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwE9QLRwfqCyTRIVjJ1N3Oszp0BYqxl3y3oyvf5vkU2T84YxcwRgrAp-aJ2IhcK2vZoOg/exec"; // <-- Ganti dengan URL Web App GAS Anda
     // =======================================================
 
     let adminCache = { siswa: [], ujian: [], logs: [], peserta: [] };
     let currentSiswa = null;
     let currentUjian = null;
+    let daftarUjianSiswa = [];
     let proctoringActive = false;
     let isRecordingViolation = false;
     let timerInterval = null;
+    let audioCtx = null;
+    let alarmInterval = null;
 
-    async function postGAS(payload) {
-      const res = await fetch(GAS_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
-      return await res.json();
+    // Helper POST ke GAS dengan Auto-Retry (Aman untuk 1000 siswa)
+    async function postGAS(payload, retries = 3) {
+      for (let i = 0; i < retries; i++) {
+        try {
+          const res = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error('Server sibuk');
+          return await res.json();
+        } catch (err) {
+          if (i === retries - 1) throw err;
+          await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
+        }
+      }
     }
 
+    // ==================== 1. LOGIN ====================
     async function prosesLogin() {
       const username = document.getElementById('login-user').value.trim();
       const password = document.getElementById('login-pass').value.trim();
@@ -350,7 +408,7 @@
             loadAdminData();
           } else {
             currentSiswa = res.siswa;
-            currentUjian = res.ujian;
+            daftarUjianSiswa = res.daftarUjian || [];
             setupHalamanSiswa();
           }
         } else {
@@ -358,7 +416,7 @@
           alertBox.classList.remove('hidden');
         }
       } catch (e) {
-        alertBox.innerText = "Gagal terhubung ke server.";
+        alertBox.innerText = "Gagal terhubung ke server. Periksa koneksi internet.";
         alertBox.classList.remove('hidden');
       } finally {
         btn.disabled = false;
@@ -366,6 +424,7 @@
       }
     }
 
+    // ==================== 2. LOGIKA ADMIN ====================
     function switchAdminTab(tab) {
       ['dashboard', 'siswa', 'ujian'].forEach(t => {
         document.getElementById(`panel-${t}`).classList.add('hidden');
@@ -548,14 +607,133 @@
       }
     }
 
+    // ==================== 3. DASHBOARD SISWA & JADWAL UJIAN ====================
     function setupHalamanSiswa() {
       document.getElementById('view-siswa').classList.remove('hidden');
-      document.getElementById('prep-ujian-nama').innerText = currentUjian.nama;
-      document.getElementById('prep-ujian-detail').innerText = `${currentUjian.mapel} • Kelas ${currentUjian.kelas} • Durasi ${currentUjian.durasi} Menit`;
+      document.getElementById('student-dashboard-screen').classList.remove('hidden');
+      document.getElementById('pre-exam-screen').classList.add('hidden');
+      document.getElementById('active-exam-screen').classList.add('hidden');
+
+      document.getElementById('dash-siswa-info').innerText = `${currentSiswa.nama} (${currentSiswa.username})`;
+      document.getElementById('dash-kelas-badge').innerText = currentSiswa.kelas;
+
+      const grid = document.getElementById('grid-jadwal-ujian');
+      if (daftarUjianSiswa.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-2 bg-white p-10 rounded-2xl border text-center text-slate-400">
+            <p class="font-bold text-base text-slate-600">Belum Ada Jadwal Ujian</p>
+            <p class="text-xs mt-1">Belum ada jadwal ujian yang terdaftar untuk kelas ${currentSiswa.kelas}.</p>
+          </div>`;
+        return;
+      }
+
+      grid.innerHTML = daftarUjianSiswa.map((u, idx) => {
+        const isAktif = u.statusUjian === 'AKTIF';
+        const isSelesai = u.statusPengerjaan === 'SELESAI';
+
+        let badgeHtml = '';
+        let buttonHtml = '';
+
+        if (isSelesai) {
+          badgeHtml = `<span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-[11px] font-bold">✓ Sudah Dikerjakan</span>`;
+          buttonHtml = `<button disabled class="w-full bg-slate-200 text-slate-500 font-bold py-2.5 rounded-xl text-xs cursor-not-allowed">Ujian Selesai</button>`;
+        } else if (isAktif) {
+          badgeHtml = `<span class="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-[11px] font-bold animate-pulse">● Siap Dikerjakan</span>`;
+          buttonHtml = `<button onclick="pilihUjian(${idx})" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs shadow transition">Kerjakan Ujian Sekarang &rarr;</button>`;
+        } else {
+          badgeHtml = `<span class="bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full text-[11px] font-bold">🕒 Akan Terlaksana</span>`;
+          buttonHtml = `<button disabled class="w-full bg-slate-100 border border-slate-200 text-slate-400 font-bold py-2.5 rounded-xl text-xs cursor-not-allowed">Belum Dibuka Pengawas</button>`;
+        }
+
+        return `
+          <div class="bg-white p-5 rounded-2xl shadow-sm border ${isAktif && !isSelesai ? 'border-blue-300 ring-1 ring-blue-100' : 'border-slate-200'} flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start gap-2 mb-3">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded">${u.nama}</span>
+                ${badgeHtml}
+              </div>
+              <h3 class="text-lg font-bold text-slate-900">${u.mapel}</h3>
+              <div class="mt-3 space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <p>📅 <b>Tanggal:</b> ${u.tanggal}</p>
+                <p>⏰ <b>Waktu Mulai:</b> ${u.jam} WIB (${u.durasi} Menit)</p>
+                <p>🛡️ <b>Toleransi Pelanggaran:</b> Maksimal ${u.batasPelanggaran}x</p>
+              </div>
+            </div>
+            <div class="mt-5">
+              ${buttonHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function pilihUjian(index) {
+      currentUjian = daftarUjianSiswa[index];
+      document.getElementById('student-dashboard-screen').classList.add('hidden');
+      document.getElementById('pre-exam-screen').classList.remove('hidden');
+
+      document.getElementById('prep-ujian-nama').innerText = `${currentUjian.nama} - ${currentUjian.mapel}`;
+      document.getElementById('prep-ujian-detail').innerText = `Kelas ${currentUjian.kelas} • Durasi ${currentUjian.durasi} Menit`;
       document.getElementById('prep-batas').innerText = `${currentUjian.batasPelanggaran} kali pelanggaran`;
     }
 
+    function batalPilihUjian() {
+      currentUjian = null;
+      document.getElementById('pre-exam-screen').classList.add('hidden');
+      document.getElementById('student-dashboard-screen').classList.remove('hidden');
+    }
+
+    // ==================== 4. PROCTORING & ALARM SUARA ====================
+    function initAudioAlarm() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function bunyikanAlarmPelanggaran() {
+      hentikannyaAlarm();
+      initAudioAlarm();
+
+      const mainkanNada = () => {
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.4);
+          gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.45);
+
+          if (navigator.vibrate) {
+            navigator.vibrate([400, 100, 400]);
+          }
+        } catch (e) {}
+      };
+
+      mainkanNada();
+      alarmInterval = setInterval(mainkanNada, 700);
+    }
+
+    function hentikannyaAlarm() {
+      if (alarmInterval) {
+        clearInterval(alarmInterval);
+        alarmInterval = null;
+      }
+      if (navigator.vibrate) {
+        navigator.vibrate(0);
+      }
+    }
+
     async function mulaiUjianFullscreen() {
+      initAudioAlarm();
       try {
         await document.documentElement.requestFullscreen();
       } catch (e) {
@@ -606,6 +784,8 @@
       if (isRecordingViolation || !proctoringActive) return;
       isRecordingViolation = true;
 
+      bunyikanAlarmPelanggaran();
+
       const res = await postGAS({
         action: 'catatPelanggaran',
         username: currentSiswa.username,
@@ -636,7 +816,10 @@
           title.innerText = "AKUN DINONAKTIFKAN (TERKUNCI)";
           desc.innerText = "Anda telah melakukan 3 kali pelanggaran. Akses ujian dikunci otomatis. Silakan lapor ke Pengawas/Admin.";
           btn.innerText = "KELUAR DARI UJIAN";
-          btn.onclick = () => location.reload();
+          btn.onclick = () => {
+            hentikannyaAlarm();
+            location.reload();
+          };
         } else if (res.pelanggaranKe === 2) {
           title.innerText = "PERINGATAN 2 (TERAKHIR!)";
           desc.innerText = "Ini adalah peringatan terakhir. Satu pelanggaran lagi akan mengunci dan menonaktifkan akun Anda secara otomatis.";
@@ -650,6 +833,7 @@
     }
 
     async function kembaliKeUjian() {
+      hentikannyaAlarm();
       document.getElementById('modal-warning').classList.add('hidden');
       if (!document.fullscreenElement) {
         try { await document.documentElement.requestFullscreen(); } catch (e) {}
@@ -668,6 +852,7 @@
         if (sisa <= 0) {
           clearInterval(timerInterval);
           proctoringActive = false;
+          hentikannyaAlarm();
           alert("Waktu ujian telah habis! Pastikan Anda sudah menekan tombol Kirim/Submit di Google Form.");
           selesaiUjianSiswa(true);
         }
@@ -680,6 +865,7 @@
         return;
       }
       proctoringActive = false;
+      hentikannyaAlarm();
       clearInterval(timerInterval);
       await postGAS({
         action: 'selesaiUjian',
