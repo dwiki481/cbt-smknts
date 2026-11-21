@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistem CBT & Proctoring</title>
+  <title>Sistem CBT & Proctoring SMK</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SDK Supabase & SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     body { font-family: 'Inter', system-ui, sans-serif; }
@@ -13,13 +15,11 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen">
 
-  <!-- 1. HALAMAN LOGIN -->
+  <!-- ==================== 1. HALAMAN LOGIN ==================== -->
   <div id="view-login" class="min-h-screen flex items-center justify-center p-4">
     <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-slate-200">
       <div class="text-center mb-6">
-        <div class="w-14 h-14 bg-blue-600 text-white rounded-xl flex items-center justify-center mx-auto mb-3 text-2xl font-bold shadow-md">
-          CBT
-        </div>
+        <img src="logo-smk.png" alt="Logo SMK" class="w-20 h-20 object-contain mx-auto mb-3" onerror="this.style.display='none'">
         <h1 class="text-2xl font-bold text-slate-900">Portal Ujian Online</h1>
         <p class="text-sm text-slate-500">Masuk menggunakan akun Siswa atau Administrator</p>
       </div>
@@ -41,7 +41,7 @@
     </div>
   </div>
 
-  <!-- 2. DASHBOARD ADMIN -->
+  <!-- ==================== 2. DASHBOARD ADMIN ==================== -->
   <div id="view-admin" class="hidden min-h-screen flex flex-col">
     <header class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow">
       <div class="flex items-center gap-3">
@@ -194,13 +194,11 @@
     </main>
   </div>
 
-  <!-- 3. RUANG UJIAN SISWA -->
-<!-- ==================== 3. RUANG UJIAN SISWA ==================== -->
+  <!-- ==================== 3. RUANG UJIAN SISWA ==================== -->
   <div id="view-siswa" class="hidden min-h-screen flex flex-col bg-slate-100 text-slate-800 no-select">
     
     <!-- LAYAR 1: DASHBOARD JADWAL UJIAN SISWA -->
     <div id="student-dashboard-screen" class="flex-grow flex flex-col">
-      <!-- Header Siswa -->
       <header class="bg-blue-800 text-white px-6 py-4 shadow flex justify-between items-center">
         <div class="flex items-center gap-3">
           <img src="logo-smk.png" alt="Logo" class="w-10 h-10 object-contain bg-white rounded-lg p-1" onerror="this.style.display='none'">
@@ -214,21 +212,15 @@
         </button>
       </header>
 
-      <!-- Konten Daftar Ujian -->
       <main class="max-w-5xl w-full mx-auto p-6 flex-grow space-y-6">
-        <!-- Banner Info -->
         <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h2 class="text-lg font-bold text-slate-900">Jadwal Ujian Kelas <span id="dash-kelas-badge" class="text-blue-600">...</span></h2>
-            <p class="text-xs text-slate-500 mt-0.5">Silakan pilih mata pelajaran yang berstatus <b>Siap Dikerjakan</b> sesuai jadwal yang ditentukan pengawas.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Silakan pilih mata pelajaran yang berstatus <b>Siap Dikerjakan</b> sesuai jadwal pengawas.</p>
           </div>
-
         </div>
 
-        <!-- Grid Kartu Jadwal Ujian -->
-        <div id="grid-jadwal-ujian" class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <!-- Kartu ujian akan dirender lewat JavaScript -->
-        </div>
+        <div id="grid-jadwal-ujian" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
       </main>
     </div>
 
@@ -260,7 +252,7 @@
       </div>
     </div>
 
-    <!-- LAYAR 3: AKTIF GOOGLE FORM (PROCTORING) -->
+    <!-- LAYAR 3: AKTIF GOOGLE FORM -->
     <div id="active-exam-screen" class="hidden flex-col h-screen bg-slate-900 text-white">
       <div class="bg-slate-950 px-4 py-2.5 flex justify-between items-center border-b border-slate-800 text-xs">
         <div class="flex items-center gap-4">
@@ -286,7 +278,7 @@
     </div>
   </div>
 
-  <!-- MODAL PERINGATAN -->
+  <!-- ==================== MODAL PERINGATAN ==================== -->
   <div id="modal-warning" class="hidden fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4">
     <div class="bg-white text-slate-900 rounded-2xl max-w-md w-full p-6 text-center shadow-2xl border-4 border-red-600">
       <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl font-extrabold">!</div>
@@ -299,7 +291,7 @@
     </div>
   </div>
 
-  <!-- MODAL SISWA -->
+  <!-- ==================== MODAL SISWA ==================== -->
   <div id="modal-siswa" class="hidden fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl max-w-md w-full p-6 space-y-4">
       <h3 class="font-bold text-lg">Form Data Siswa</h3>
@@ -318,7 +310,7 @@
     </div>
   </div>
 
-  <!-- MODAL UJIAN -->
+  <!-- ==================== MODAL UJIAN ==================== -->
   <div id="modal-ujian" class="hidden fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl max-w-lg w-full p-6 space-y-3">
       <h3 class="font-bold text-lg">Pengaturan Jadwal Ujian</h3>
@@ -326,7 +318,7 @@
       <div class="grid grid-cols-2 gap-3">
         <input type="text" id="form-u-nama" placeholder="Nama Ujian (Misal: SAS)" class="border p-2 rounded text-xs">
         <input type="text" id="form-u-mapel" placeholder="Mata Pelajaran" class="border p-2 rounded text-xs">
-        <input type="text" id="form-u-kelas" placeholder="Target Kelas (Misal: X DKV 1)" class="border p-2 rounded text-xs">
+        <input type="text" id="form-u-kelas" placeholder="Target Kelas (Misal: X DKV 1 atau SEMUA)" class="border p-2 rounded text-xs">
         <input type="date" id="form-u-tanggal" class="border p-2 rounded text-xs">
         <input type="time" id="form-u-jam" class="border p-2 rounded text-xs">
         <input type="number" id="form-u-durasi" placeholder="Durasi (Menit)" value="90" class="border p-2 rounded text-xs">
@@ -352,10 +344,15 @@
     </div>
   </div>
 
- <script>
-    // ================= KONFIGURASI BACKEND =================
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbwxQkZtrIXwy13UmR9zo6s1yRYyDn1oRDGRZo_i7aISr_x4wxwGrX_xJAwkKPsO03MF7A/exec";
-    // =======================================================
+  <script>
+    // ================= KONFIGURASI SUPABASE =================
+    const SUPABASE_URL = "https://oaewoxucnmtzpgivdjan.supabase.co/rest/v1/";
+    const SUPABASE_KEY = "sb_publishable_PFEK4QkcM58jcC-NWbptfQ_vEEkmlMu";
+    const ADMIN_USER = "admin";
+    const ADMIN_PASS = "admin123";
+    // ========================================================
+
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let adminCache = { siswa: [], ujian: [], logs: [], peserta: [] };
     let currentSiswa = null;
@@ -364,26 +361,6 @@
     let proctoringActive = false;
     let isRecordingViolation = false;
     let timerInterval = null;
-    let audioCtx = null;
-    let alarmInterval = null;
-
-    // Helper POST ke GAS dengan Auto-Retry (Aman untuk 1000 siswa)
-    async function postGAS(payload, retries = 3) {
-      for (let i = 0; i < retries; i++) {
-        try {
-          const res = await fetch(GAS_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(payload)
-          });
-          if (!res.ok) throw new Error('Server sibuk');
-          return await res.json();
-        } catch (err) {
-          if (i === retries - 1) throw err;
-          await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
-        }
-      }
-    }
 
     // ==================== 1. LOGIN ====================
     async function prosesLogin() {
@@ -398,23 +375,61 @@
       alertBox.classList.add('hidden');
 
       try {
-        const res = await postGAS({ action: 'login', username, password });
-        if (res.status === 'success') {
+        // Cek Login Admin
+        if (username === ADMIN_USER && password === ADMIN_PASS) {
           document.getElementById('view-login').classList.add('hidden');
-          if (res.role === 'admin') {
-            document.getElementById('view-admin').classList.remove('hidden');
-            loadAdminData();
-          } else {
-            currentSiswa = res.siswa;
-            daftarUjianSiswa = res.daftarUjian || [];
-            setupHalamanSiswa();
-          }
-        } else {
-          alertBox.innerText = res.message;
-          alertBox.classList.remove('hidden');
+          document.getElementById('view-admin').classList.remove('hidden');
+          await loadAdminData();
+          return;
         }
+
+        // Cek Login Siswa ke Supabase
+        const { data: siswa, error } = await db
+          .from('siswa')
+          .select('*')
+          .eq('username', username)
+          .eq('password', password)
+          .single();
+
+        if (error || !siswa) {
+          alertBox.innerText = "Username atau Password salah!";
+          alertBox.classList.remove('hidden');
+          return;
+        }
+
+        if (siswa.status === 'NONAKTIF') {
+          alertBox.innerText = "AKUN DINONAKTIFKAN! Anda telah melebihi batas pelanggaran. Hubungi Pengawas/Admin.";
+          alertBox.classList.remove('hidden');
+          return;
+        }
+
+        currentSiswa = siswa;
+
+        // Ambil daftar ujian sesuai kelas siswa atau kelas 'SEMUA'
+        const { data: listUjian } = await db
+          .from('ujian')
+          .select('*')
+          .or(`kelas.ilike.${siswa.kelas},kelas.ilike.SEMUA`);
+
+        // Ambil status pengerjaan siswa
+        const { data: listPeserta } = await db
+          .from('peserta_aktif')
+          .select('*')
+          .eq('username', siswa.username);
+
+        const statusMap = {};
+        (listPeserta || []).forEach(p => { statusMap[p.ujian] = p.status_ujian; });
+
+        daftarUjianSiswa = (listUjian || []).map(u => ({
+          ...u,
+          statusPengerjaan: statusMap[u.nama] || 'BELUM'
+        }));
+
+        document.getElementById('view-login').classList.add('hidden');
+        setupHalamanSiswa();
+
       } catch (e) {
-        alertBox.innerText = "Gagal terhubung ke server. Periksa koneksi internet.";
+        alertBox.innerText = "Gagal terhubung ke database Supabase.";
         alertBox.classList.remove('hidden');
       } finally {
         btn.disabled = false;
@@ -433,71 +448,81 @@
     }
 
     async function loadAdminData() {
-      const res = await fetch(`${GAS_URL}?action=getAdminData`);
-      const data = await res.json();
-      if (data.status === 'success') {
-        adminCache = data;
-        renderDashboard();
-        renderTabelSiswa();
-        renderTabelUjian();
-      }
+      const [resSiswa, resUjian, resLogs, resPeserta] = await Promise.all([
+        db.from('siswa').select('*').order('kelas', { ascending: true }),
+        db.from('ujian').select('*').order('tanggal', { ascending: true }),
+        db.from('log_pelanggaran').select('*').order('id', { ascending: false }).limit(50),
+        db.from('peserta_aktif').select('*')
+      ]);
+
+      adminCache.siswa = resSiswa.data || [];
+      adminCache.ujian = resUjian.data || [];
+      adminCache.logs = resLogs.data || [];
+      adminCache.peserta = resPeserta.data || [];
+
+      renderDashboard();
+      renderTabelSiswa();
+      renderTabelUjian();
     }
 
     function renderDashboard() {
       document.getElementById('stat-siswa').innerText = adminCache.siswa.length;
       document.getElementById('stat-ujian').innerText = adminCache.ujian.length;
-      document.getElementById('stat-ujian-aktif').innerText = adminCache.ujian.filter(u => u[9] === 'AKTIF').length;
-      document.getElementById('stat-peserta').innerText = adminCache.peserta.filter(p => p[4] === 'MENGERJAKAN').length;
+      document.getElementById('stat-ujian-aktif').innerText = adminCache.ujian.filter(u => u.status === 'AKTIF').length;
+      document.getElementById('stat-peserta').innerText = adminCache.peserta.filter(p => p.status_ujian === 'MENGERJAKAN').length;
       document.getElementById('stat-pelanggaran').innerText = adminCache.logs.length;
 
-      const nonaktif = adminCache.siswa.filter(s => s[4] === 'NONAKTIF');
+      const nonaktif = adminCache.siswa.filter(s => s.status === 'NONAKTIF');
       document.getElementById('tabel-nonaktif').innerHTML = nonaktif.length ? nonaktif.map(s => `
         <tr>
-          <td class="p-2.5 font-mono font-bold">${s[0]}</td>
-          <td class="p-2.5">${s[2]}</td>
-          <td class="p-2.5">${s[3]}</td>
-          <td class="p-2.5 text-red-600 font-bold">${s[5]}x</td>
+          <td class="p-2.5 font-mono font-bold">${s.username}</td>
+          <td class="p-2.5">${s.nama}</td>
+          <td class="p-2.5">${s.kelas}</td>
+          <td class="p-2.5 text-red-600 font-bold">${s.pelanggaran}x</td>
           <td class="p-2.5">
-            <button onclick="aktifkanSiswa('${s[0]}')" class="bg-green-600 text-white px-2.5 py-1 rounded font-bold">
+            <button onclick="aktifkanSiswa('${s.username}')" class="bg-green-600 text-white px-2.5 py-1 rounded font-bold">
               Aktifkan Kembali
             </button>
           </td>
         </tr>
       `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">Tidak ada siswa yang terkunci.</td></tr>`;
 
-      document.getElementById('tabel-logs').innerHTML = adminCache.logs.slice(0, 30).map(l => `
-        <tr>
-          <td class="p-2.5 font-mono text-slate-500">${l[0]}</td>
-          <td class="p-2.5 font-semibold">${l[2]} (${l[3]})</td>
-          <td class="p-2.5 text-red-600">${l[5]}</td>
-        </tr>
-      `).join('');
+      document.getElementById('tabel-logs').innerHTML = adminCache.logs.map(l => {
+        const waktuLocal = new Date(l.waktu).toLocaleString('id-ID');
+        return `
+          <tr>
+            <td class="p-2.5 font-mono text-slate-500">${waktuLocal}</td>
+            <td class="p-2.5 font-semibold">${l.nama} (${l.kelas})</td>
+            <td class="p-2.5 text-red-600">${l.keterangan}</td>
+          </tr>
+        `;
+      }).join('');
     }
 
     function renderTabelSiswa() {
-      const kelasSet = [...new Set(adminCache.siswa.map(s => s[3]))];
+      const kelasSet = [...new Set(adminCache.siswa.map(s => s.kelas))];
       const filterEl = document.getElementById('filter-kelas');
       const currentVal = filterEl.value;
       filterEl.innerHTML = `<option value="ALL">Semua Kelas</option>` + kelasSet.map(k => `<option value="${k}">${k}</option>`).join('');
       filterEl.value = currentVal || 'ALL';
 
-      const filtered = filterEl.value === 'ALL' ? adminCache.siswa : adminCache.siswa.filter(s => s[3] === filterEl.value);
+      const filtered = filterEl.value === 'ALL' ? adminCache.siswa : adminCache.siswa.filter(s => s.kelas === filterEl.value);
       
       document.getElementById('tabel-siswa').innerHTML = filtered.map(s => `
         <tr>
-          <td class="p-3 font-mono font-bold">${s[0]}</td>
-          <td class="p-3 font-mono text-slate-500">${s[1]}</td>
-          <td class="p-3 font-semibold">${s[2]}</td>
-          <td class="p-3">${s[3]}</td>
+          <td class="p-3 font-mono font-bold">${s.username}</td>
+          <td class="p-3 font-mono text-slate-500">${s.password}</td>
+          <td class="p-3 font-semibold">${s.nama}</td>
+          <td class="p-3">${s.kelas}</td>
           <td class="p-3">
-            <span class="px-2 py-0.5 rounded font-bold ${s[4] === 'AKTIF' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-              ${s[4]}
+            <span class="px-2 py-0.5 rounded font-bold ${s.status === 'AKTIF' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+              ${s.status}
             </span>
           </td>
-          <td class="p-3 font-bold">${s[5] || 0}</td>
+          <td class="p-3 font-bold">${s.pelanggaran || 0}</td>
           <td class="p-3 text-right space-x-1">
-            <button onclick="resetPassSiswa('${s[0]}')" class="bg-amber-100 text-amber-800 px-2 py-1 rounded">Reset Pass</button>
-            <button onclick="hapusSiswa('${s[0]}')" class="bg-red-100 text-red-700 px-2 py-1 rounded">Hapus</button>
+            <button onclick="resetPassSiswa('${s.username}')" class="bg-amber-100 text-amber-800 px-2 py-1 rounded">Reset Pass</button>
+            <button onclick="hapusSiswa('${s.username}')" class="bg-red-100 text-red-700 px-2 py-1 rounded">Hapus</button>
           </td>
         </tr>
       `).join('');
@@ -506,34 +531,35 @@
     function openModalSiswa() { document.getElementById('modal-siswa').classList.remove('hidden'); }
 
     async function simpanSiswa() {
-      await postGAS({
-        action: 'saveSiswa',
+      const payload = {
         username: document.getElementById('form-s-user').value.trim(),
         password: document.getElementById('form-s-pass').value.trim(),
         nama: document.getElementById('form-s-nama').value.trim(),
         kelas: document.getElementById('form-s-kelas').value.trim(),
-        status: document.getElementById('form-s-status').value
-      });
+        status: document.getElementById('form-s-status').value,
+        pelanggaran: 0
+      };
+      await db.from('siswa').upsert(payload);
       document.getElementById('modal-siswa').classList.add('hidden');
       loadAdminData();
     }
 
     async function aktifkanSiswa(username) {
-      await postGAS({ action: 'toggleStatusSiswa', username, status: 'AKTIF' });
+      await db.from('siswa').update({ status: 'AKTIF', pelanggaran: 0 }).eq('username', username);
       loadAdminData();
     }
 
     async function resetPassSiswa(username) {
       const newPass = prompt(`Masukkan password baru untuk ${username}:`, "123456");
       if (newPass) {
-        await postGAS({ action: 'resetPassword', username, newPass });
+        await db.from('siswa').update({ password: newPass }).eq('username', username);
         loadAdminData();
       }
     }
 
     async function hapusSiswa(username) {
       if (confirm(`Hapus siswa ${username}?`)) {
-        await postGAS({ action: 'deleteSiswa', username });
+        await db.from('siswa').delete().eq('username', username);
         loadAdminData();
       }
     }
@@ -549,10 +575,13 @@
           username: String(r.Username || r.username || '').trim(),
           password: String(r.Password || r.password || '12345').trim(),
           nama: String(r.Nama || r.nama || '').trim(),
-          kelas: String(r.Kelas || r.kelas || '').trim()
-        }));
-        const res = await postGAS({ action: 'importSiswa', list });
-        alert(res.message);
+          kelas: String(r.Kelas || r.kelas || 'UMUM').trim(),
+          status: 'AKTIF',
+          pelanggaran: 0
+        })).filter(x => x.username && x.nama);
+
+        const { error } = await db.from('siswa').upsert(list);
+        if (!error) alert(`${list.length} siswa berhasil diimpor!`);
         loadAdminData();
       };
       reader.readAsBinaryString(file);
@@ -561,18 +590,21 @@
     function renderTabelUjian() {
       document.getElementById('tabel-ujian').innerHTML = adminCache.ujian.map(u => `
         <tr>
-          <td class="p-3 font-bold">${u[1]}</td>
-          <td class="p-3">${u[2]}</td>
-          <td class="p-3"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">${u[3]}</span></td>
-          <td class="p-3">${u[4]} • ${u[5]} (${u[6]} mnt)</td>
-          <td class="p-3 font-bold text-red-600">${u[8]}x</td>
+          <td class="p-3 font-bold">${u.nama}</td>
+          <td class="p-3">${u.mapel}</td>
+          <td class="p-3"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-semibold">${u.kelas}</span></td>
+          <td class="p-3">${formatTanggalID(u.tanggal)} • ${u.jam} (${u.durasi} mnt)</td>
+          <td class="p-3 font-bold text-red-600">${u.batas_pelanggaran}x</td>
           <td class="p-3">
-            <span class="px-2 py-0.5 rounded font-bold ${u[9] === 'AKTIF' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}">
-              ${u[9]}
+            <span class="px-2 py-0.5 rounded font-bold ${u.status === 'AKTIF' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}">
+              ${u.status}
             </span>
           </td>
-          <td class="p-3 text-right">
-            <button onclick="hapusUjian('${u[0]}')" class="bg-red-100 text-red-700 px-2 py-1 rounded">Hapus</button>
+          <td class="p-3 text-right space-x-1">
+            <button onclick="toggleStatusUjian('${u.id}', '${u.status === 'AKTIF' ? 'NONAKTIF' : 'AKTIF'}')" class="bg-blue-100 text-blue-700 px-2 py-1 rounded">
+              ${u.status === 'AKTIF' ? 'Nonaktifkan' : 'Aktifkan'}
+            </button>
+            <button onclick="hapusUjian('${u.id}')" class="bg-red-100 text-red-700 px-2 py-1 rounded">Hapus</button>
           </td>
         </tr>
       `).join('');
@@ -581,55 +613,49 @@
     function openModalUjian() { document.getElementById('modal-ujian').classList.remove('hidden'); }
 
     async function simpanUjian() {
-      await postGAS({
-        action: 'saveUjian',
-        id: document.getElementById('form-u-id').value,
-        nama: document.getElementById('form-u-nama').value,
-        mapel: document.getElementById('form-u-mapel').value,
-        kelas: document.getElementById('form-u-kelas').value,
+      let link = document.getElementById('form-u-link').value.trim();
+      if (link.includes('viewform') && !link.includes('embedded=true')) {
+        link += (link.includes('?') ? '&' : '?') + 'embedded=true';
+      }
+
+      const payload = {
+        id: document.getElementById('form-u-id').value || 'UJ-' + Date.now(),
+        nama: document.getElementById('form-u-nama').value.trim(),
+        mapel: document.getElementById('form-u-mapel').value.trim(),
+        kelas: document.getElementById('form-u-kelas').value.trim(),
         tanggal: document.getElementById('form-u-tanggal').value,
         jam: document.getElementById('form-u-jam').value,
-        durasi: document.getElementById('form-u-durasi').value,
-        link: document.getElementById('form-u-link').value,
-        batas: document.getElementById('form-u-batas').value,
+        durasi: Number(document.getElementById('form-u-durasi').value) || 90,
+        link: link,
+        batas_pelanggaran: Number(document.getElementById('form-u-batas').value) || 3,
         status: document.getElementById('form-u-status').value
-      });
+      };
+
+      await db.from('ujian').upsert(payload);
       document.getElementById('modal-ujian').classList.add('hidden');
+      loadAdminData();
+    }
+
+    async function toggleStatusUjian(id, newStatus) {
+      await db.from('ujian').update({ status: newStatus }).eq('id', id);
       loadAdminData();
     }
 
     async function hapusUjian(id) {
       if (confirm("Hapus jadwal ujian ini?")) {
-        await postGAS({ action: 'deleteUjian', id });
+        await db.from('ujian').delete().eq('id', id);
         loadAdminData();
       }
     }
 
     // ==================== 3. DASHBOARD SISWA & JADWAL UJIAN ====================
-   // Helper format tanggal menjadi "Rabu, 18 November 2026"
     function formatTanggalID(tglStr) {
       if (!tglStr) return '-';
-      const d = new Date(tglStr);
-      if (isNaN(d.getTime())) return tglStr; // Jika sudah teks biasa, langsung tampilkan
-      return d.toLocaleDateString('id-ID', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
+      const d = new Date(tglStr + 'T00:00:00');
+      if (isNaN(d.getTime())) return tglStr;
+      return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     }
 
-
-    function formatJamID(jamStr) {
-      if (!jamStr) return '-';
-  
-      if (/^\d{1,2}:\d{2}$/.test(jamStr.trim())) return jamStr.trim();
-      const d = new Date(jamStr);
-      if (isNaN(d.getTime())) return jamStr;
-      const jam = String(d.getHours()).padStart(2, '0');
-      const menit = String(d.getMinutes()).padStart(2, '0');
-      return `${jam}:${menit}`;
-    }
     function setupHalamanSiswa() {
       document.getElementById('view-siswa').classList.remove('hidden');
       document.getElementById('student-dashboard-screen').classList.remove('hidden');
@@ -650,7 +676,7 @@
       }
 
       grid.innerHTML = daftarUjianSiswa.map((u, idx) => {
-        const isAktif = u.statusUjian === 'AKTIF';
+        const isAktif = u.status === 'AKTIF';
         const isSelesai = u.statusPengerjaan === 'SELESAI';
 
         let badgeHtml = '';
@@ -677,8 +703,8 @@
               <h3 class="text-lg font-bold text-slate-900">${u.mapel}</h3>
               <div class="mt-3 space-y-1.5 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
                 <p>📅 <b>Tanggal:</b> ${formatTanggalID(u.tanggal)}</p>
-                <p>⏰ <b>Waktu Mulai:</b> ${formatJamID(u.jam)} WIB (${u.durasi} Menit)</p>
-                <p>🛡️ <b>Toleransi Pelanggaran:</b> Maksimal ${u.batasPelanggaran}x</p>
+                <p>⏰ <b>Waktu Mulai:</b> ${u.jam} WIB (${u.durasi} Menit)</p>
+                <p>🛡️ <b>Toleransi Pelanggaran:</b> Maksimal ${u.batas_pelanggaran}x</p>
               </div>
             </div>
             <div class="mt-5">
@@ -696,7 +722,7 @@
 
       document.getElementById('prep-ujian-nama').innerText = `${currentUjian.nama} - ${currentUjian.mapel}`;
       document.getElementById('prep-ujian-detail').innerText = `Kelas ${currentUjian.kelas} • Durasi ${currentUjian.durasi} Menit`;
-      document.getElementById('prep-batas').innerText = `${currentUjian.batasPelanggaran} kali pelanggaran`;
+      document.getElementById('prep-batas').innerText = `${currentUjian.batas_pelanggaran} kali pelanggaran`;
     }
 
     function batalPilihUjian() {
@@ -705,62 +731,22 @@
       document.getElementById('student-dashboard-screen').classList.remove('hidden');
     }
 
-    // ==================== 4. PROCTORING & ALARM SUARA ====================
-    function initAudioAlarm() {
-      if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContext();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }
-
-    // function bunyikanAlarmPelanggaran() {
-    //   //hentikannyaAlarm();
-    //   //initAudioAlarm();
-
-    //   const mainkanNada = () => {
-    //     try {
-    //       const osc = audioCtx.createOscillator();
-    //       const gain = audioCtx.createGain();
-    //       osc.type = 'sawtooth';
-    //       osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-    //       osc.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.4);
-    //       gain.gain.setValueAtTime(0.8, audioCtx.currentTime);
-    //       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.45);
-    //       osc.connect(gain);
-    //       gain.connect(audioCtx.destination);
-    //       osc.start();
-    //       osc.stop(audioCtx.currentTime + 0.45);
-
-    //       if (navigator.vibrate) {
-    //         navigator.vibrate([400, 100, 400]);
-    //       }
-    //     } catch (e) {}
-    //   };
-
-    //   mainkanNada();
-    //   alarmInterval = setInterval(mainkanNada, 700);
-    // }
-
-    function hentikannyaAlarm() {
-      if (alarmInterval) {
-        clearInterval(alarmInterval);
-        alarmInterval = null;
-      }
-      if (navigator.vibrate) {
-        navigator.vibrate(0);
-      }
-    }
-
+    // ==================== 4. PROCTORING (TANPA SUARA) ====================
     async function mulaiUjianFullscreen() {
-      initAudioAlarm();
       try {
         await document.documentElement.requestFullscreen();
       } catch (e) {
         alert("Izinkan mode layar penuh pada browser untuk memulai ujian.");
       }
+
+      // Catat status MENGERJAKAN di Supabase
+      await db.from('peserta_aktif').upsert({
+        username: currentSiswa.username,
+        nama: currentSiswa.nama,
+        kelas: currentSiswa.kelas,
+        ujian: currentUjian.nama,
+        status_ujian: 'MENGERJAKAN'
+      }, { onConflict: 'username,ujian' });
 
       document.getElementById('pre-exam-screen').classList.add('hidden');
       document.getElementById('active-exam-screen').classList.remove('hidden');
@@ -768,8 +754,8 @@
 
       document.getElementById('exam-header-siswa').innerText = `${currentSiswa.nama} (${currentSiswa.kelas})`;
       document.getElementById('exam-header-ujian').innerText = `${currentUjian.nama} - ${currentUjian.mapel}`;
-      document.getElementById('exam-violation-count').innerText = currentSiswa.pelanggaran;
-      document.getElementById('exam-violation-max').innerText = currentUjian.batasPelanggaran;
+      document.getElementById('exam-violation-count').innerText = currentSiswa.pelanggaran || 0;
+      document.getElementById('exam-violation-max').innerText = currentUjian.batas_pelanggaran;
       document.getElementById('gform-frame').src = currentUjian.link;
 
       setTimeout(() => {
@@ -806,56 +792,66 @@
       if (isRecordingViolation || !proctoringActive) return;
       isRecordingViolation = true;
 
-      //bunyikanAlarmPelanggaran();
+      const jumlahBaru = (currentSiswa.pelanggaran || 0) + 1;
+      const terkunci = jumlahBaru >= currentUjian.batas_pelanggaran;
+      const waktuStr = new Date().toLocaleTimeString('id-ID');
 
-      const res = await postGAS({
-        action: 'catatPelanggaran',
+      // Simpan log & update jumlah pelanggaran ke Supabase
+      await db.from('log_pelanggaran').insert({
         username: currentSiswa.username,
         nama: currentSiswa.nama,
         kelas: currentSiswa.kelas,
         ujian: currentUjian.nama,
-        batas: currentUjian.batasPelanggaran,
         keterangan: alasan
       });
 
-      if (res.status === 'success') {
-        currentSiswa.pelanggaran = res.pelanggaranKe;
-        document.getElementById('exam-violation-count').innerText = res.pelanggaranKe;
+      await db.from('siswa').update({
+        pelanggaran: jumlahBaru,
+        status: terkunci ? 'NONAKTIF' : 'AKTIF'
+      }).eq('username', currentSiswa.username);
 
-        const modal = document.getElementById('modal-warning');
-        const title = document.getElementById('warn-title');
-        const desc = document.getElementById('warn-desc');
-        const btn = document.getElementById('warn-btn');
+      if (terkunci) {
+        await db.from('peserta_aktif').upsert({
+          username: currentSiswa.username,
+          nama: currentSiswa.nama,
+          kelas: currentSiswa.kelas,
+          ujian: currentUjian.nama,
+          status_ujian: 'TERKUNCI'
+        }, { onConflict: 'username,ujian' });
+      }
 
-        document.getElementById('warn-time').innerText = `Waktu Kejadian: ${res.waktu} • ${alasan}`;
-        modal.classList.remove('hidden');
+      currentSiswa.pelanggaran = jumlahBaru;
+      document.getElementById('exam-violation-count').innerText = jumlahBaru;
 
-        if (res.terkunci) {
-          proctoringActive = false;
-          clearInterval(timerInterval);
-          document.getElementById('gform-frame').src = "about:blank";
-          
-          title.innerText = "AKUN DINONAKTIFKAN (TERKUNCI)";
-          desc.innerText = "Anda telah melakukan 3 kali pelanggaran. Akses ujian dikunci otomatis. Silakan lapor ke Pengawas/Admin.";
-          btn.innerText = "KELUAR DARI UJIAN";
-          btn.onclick = () => {
-            hentikannyaAlarm();
-            location.reload();
-          };
-        } else if (res.pelanggaranKe === 2) {
-          title.innerText = "PERINGATAN 2 (TERAKHIR!)";
-          desc.innerText = "Ini adalah peringatan terakhir. Satu pelanggaran lagi akan mengunci dan menonaktifkan akun Anda secara otomatis.";
-        } else {
-          title.innerText = `PERINGATAN ${res.pelanggaranKe}`;
-          desc.innerText = "Sistem mendeteksi aktivitas mencurigakan dan telah mencatatnya ke server pengawas.";
-        }
+      const modal = document.getElementById('modal-warning');
+      const title = document.getElementById('warn-title');
+      const desc = document.getElementById('warn-desc');
+      const btn = document.getElementById('warn-btn');
+
+      document.getElementById('warn-time').innerText = `Waktu Kejadian: ${waktuStr} • ${alasan}`;
+      modal.classList.remove('hidden');
+
+      if (terkunci) {
+        proctoringActive = false;
+        clearInterval(timerInterval);
+        document.getElementById('gform-frame').src = "about:blank";
+        
+        title.innerText = "AKUN DINONAKTIFKAN (TERKUNCI)";
+        desc.innerText = "Anda telah melakukan 3 kali pelanggaran. Akses ujian dikunci otomatis. Silakan lapor ke Pengawas/Admin.";
+        btn.innerText = "KELUAR DARI UJIAN";
+        btn.onclick = () => location.reload();
+      } else if (jumlahBaru === 2) {
+        title.innerText = "PERINGATAN 2 (TERAKHIR!)";
+        desc.innerText = "Ini adalah peringatan terakhir. Satu pelanggaran lagi akan mengunci dan menonaktifkan akun Anda secara otomatis.";
+      } else {
+        title.innerText = `PERINGATAN ${jumlahBaru}`;
+        desc.innerText = "Sistem mendeteksi aktivitas mencurigakan dan telah mencatatnya ke server pengawas.";
       }
       
       setTimeout(() => { isRecordingViolation = false; }, 1500);
     }
 
     async function kembaliKeUjian() {
-      hentikannyaAlarm();
       document.getElementById('modal-warning').classList.add('hidden');
       if (!document.fullscreenElement) {
         try { await document.documentElement.requestFullscreen(); } catch (e) {}
@@ -874,7 +870,6 @@
         if (sisa <= 0) {
           clearInterval(timerInterval);
           proctoringActive = false;
-          hentikannyaAlarm();
           alert("Waktu ujian telah habis! Pastikan Anda sudah menekan tombol Kirim/Submit di Google Form.");
           selesaiUjianSiswa(true);
         }
@@ -887,18 +882,17 @@
         return;
       }
       proctoringActive = false;
-      hentikannyaAlarm();
       clearInterval(timerInterval);
-      await postGAS({
-        action: 'selesaiUjian',
+
+      await db.from('peserta_aktif').upsert({
         username: currentSiswa.username,
         nama: currentSiswa.nama,
         kelas: currentSiswa.kelas,
-        ujian: currentUjian.nama
-      });
+        ujian: currentUjian.nama,
+        status_ujian: 'SELESAI'
+      }, { onConflict: 'username,ujian' });
+
       if (document.fullscreenElement) document.exitFullscreen();
       location.reload();
     }
   </script>
-</body>
-</html>
