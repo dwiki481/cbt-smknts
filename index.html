@@ -229,6 +229,51 @@
         </div>
     </div>
 
+    <!-- Modal: Import Massal Peserta via CSV / Excel -->
+    <div id="import-csv-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 class="font-bold text-lg text-slate-800">Import Data Peserta (CSV / Excel)</h3>
+                <button onclick="document.getElementById('import-csv-modal').classList.add('hidden')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="p-4 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between gap-3">
+                    <div>
+                        <div class="text-xs font-bold text-indigo-900">1. Unduh Template Format CSV</div>
+                        <p class="text-[11px] text-indigo-700 mt-0.5">Buka file ini di Excel/Sheets, isi data siswa, lalu simpan kembali dalam format <strong>.CSV</strong>.</p>
+                    </div>
+                    <button type="button" onclick="downloadParticipantCsvTemplate()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold shadow-2xs transition">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Template CSV</span>
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">2. Pilih Jadwal Ujian Tujuan</label>
+                    <select id="csv-target-exam" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 bg-white"></select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">3. Unggah File CSV Peserta</label>
+                    <input type="file" id="csv-file-input" accept=".csv,.txt" onchange="previewCsvFile(event)" class="w-full px-3.5 py-2.5 rounded-xl border border-dashed border-slate-300 text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                    <p class="text-[11px] text-slate-400 mt-1.5">Kolom wajib: <code class="text-slate-600">Nama Lengkap, Username/NISN, Kelas, Ruang</code> (mendukung pemisah koma <code>,</code> maupun titik koma <code>;</code> dari Excel Indonesia).</p>
+                </div>
+
+                <div id="csv-preview-box" class="hidden p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+                    <div id="csv-preview-summary" class="font-bold text-slate-800 mb-1"></div>
+                    <div id="csv-preview-sample" class="text-[11px] text-slate-500 max-h-28 overflow-y-auto space-y-1"></div>
+                </div>
+
+                <div class="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-100">
+                    <button type="button" onclick="document.getElementById('import-csv-modal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
+                    <button type="button" id="btn-process-csv" onclick="processCsvImport()" disabled class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition">Import ke Supabase</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Riwayat Pelanggaran Peserta -->
     <div id="history-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
@@ -1085,29 +1130,157 @@
             renderApp();
         }
 
-        function saveNewStaffUser(e) {
-            e.preventDefault();
-            const name = document.getElementById('staff-name').value.trim();
-            const username = document.getElementById('staff-username').value.trim();
-            const password = document.getElementById('staff-password').value.trim();
-            const role = document.getElementById('staff-role').value;
+        let parsedCsvParticipants = [];
 
-            if (appState.staffUsers.some(u => u.username.toLowerCase() === username.toLowerCase())) {
-                showToast('Username staf sudah digunakan!', 'danger');
+        function openImportCsvModal() {
+            if (appState.exams.length === 0) {
+                showToast('Buat jadwal ujian terlebih dahulu sebelum import peserta!', 'warning');
                 return;
             }
+            const examSelect = document.getElementById('csv-target-exam');
+            examSelect.innerHTML = appState.exams.map(ex => `<option value="${ex.id}" ${ex.id === appState.selectedMonitoringExamId ? 'selected' : ''}>${ex.subject} (${ex.className})</option>`).join('');
+            document.getElementById('csv-file-input').value = '';
+            document.getElementById('csv-preview-box').classList.add('hidden');
+            document.getElementById('btn-process-csv').disabled = true;
+            parsedCsvParticipants = [];
+            document.getElementById('import-csv-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
 
-            const newStaff = {
-                id: 'staff-' + Date.now(),
-                name,
-                username,
-                password,
-                role
+        function downloadParticipantCsvTemplate() {
+            const csvContent = [
+                'Nama Lengkap,Username/NISN,Kelas,Ruang',
+                'Ahmad Fauzi,0081001,X-A,Ruang 1',
+                'Dewi Lestari,0081002,X-A,Ruang 1',
+                'Rizky Pratama,0081003,X-A,Ruang 1'
+            ].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'template_peserta_cbt.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Template CSV berhasil diunduh!', 'success');
+        }
+
+        function previewCsvFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result || '';
+                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                parsedCsvParticipants = [];
+
+                lines.forEach((line, idx) => {
+                    const delimiter = line.includes(';') ? ';' : ',';
+                    const cols = line.split(delimiter).map(c => c.replace(/^"|"$/g, '').trim());
+                    if (cols.length < 2) return;
+                    // Lewati baris header
+                    if (idx === 0 && (cols[0].toLowerCase().includes('nama') || cols[1].toLowerCase().includes('nisn') || cols[1].toLowerCase().includes('username'))) {
+                        return;
+                    }
+                    const name = cols[0];
+                    const username = cols[1];
+                    const className = cols[2] || 'Umum';
+                    const room = cols[3] || 'Ruang 1';
+                    if (name && username) {
+                        parsedCsvParticipants.push({ name, username, className, room });
+                    }
+                });
+
+                const previewBox = document.getElementById('csv-preview-box');
+                const summaryEl = document.getElementById('csv-preview-summary');
+                const sampleEl = document.getElementById('csv-preview-sample');
+                const btnProcess = document.getElementById('btn-process-csv');
+
+                previewBox.classList.remove('hidden');
+                if (parsedCsvParticipants.length === 0) {
+                    summaryEl.textContent = 'Tidak ditemukan baris data valid dalam file CSV.';
+                    sampleEl.innerHTML = '';
+                    btnProcess.disabled = true;
+                } else {
+                    summaryEl.textContent = `Siap mengimpor ${parsedCsvParticipants.length} peserta ujian:`;
+                    sampleEl.innerHTML = parsedCsvParticipants.slice(0, 8).map((p, i) => `<div>${i + 1}. <strong>${p.name}</strong> (${p.username}) — ${p.className} • ${p.room}</div>`).join('') +
+                        (parsedCsvParticipants.length > 8 ? `<div class="italic text-slate-400">...dan ${parsedCsvParticipants.length - 8} peserta lainnya</div>` : '');
+                    btnProcess.disabled = false;
+                }
             };
-            appState.staffUsers.push(newStaff);
-            syncStaffToSupabase(newStaff);
-            e.target.reset();
-            showToast(`Akun ${name} (${role}) berhasil ditambahkan!`, 'success');
+            reader.readAsText(file);
+        }
+
+        async function processCsvImport() {
+            if (parsedCsvParticipants.length === 0) return;
+            const examId = document.getElementById('csv-target-exam').value;
+            const exam = appState.exams.find(ex => ex.id === examId);
+            const btnProcess = document.getElementById('btn-process-csv');
+            btnProcess.disabled = true;
+            btnProcess.textContent = 'Mengimpor...';
+
+            const rowsToUpsert = [];
+            parsedCsvParticipants.forEach((item, idx) => {
+                const existing = appState.participants.find(p => p.username.toLowerCase() === item.username.toLowerCase());
+                const participantObj = {
+                    id: existing ? existing.id : `siswa-${Date.now()}-${idx}`,
+                    name: item.name,
+                    username: item.username,
+                    email: `${item.username}@sekolah.sch.id`,
+                    className: item.className,
+                    room: item.room,
+                    examId: examId,
+                    status: existing ? existing.status : 'Belum Masuk',
+                    violations: existing ? existing.violations : 0,
+                    maxViolations: exam ? (exam.maxViolations || 3) : 3,
+                    lastViolationReason: existing ? existing.lastViolationReason : '',
+                    violationLogs: existing ? existing.violationLogs : [],
+                    lastActive: existing ? existing.lastActive : '-',
+                    remainingSeconds: exam ? exam.durationSeconds : 5400,
+                    answers: existing ? existing.answers : {}
+                };
+
+                if (existing) {
+                    Object.assign(existing, participantObj);
+                } else {
+                    appState.participants.push(participantObj);
+                }
+
+                rowsToUpsert.push({
+                    id: participantObj.id,
+                    name: participantObj.name,
+                    username: participantObj.username,
+                    email: participantObj.email,
+                    class_name: participantObj.className,
+                    room: participantObj.room,
+                    exam_id: participantObj.examId,
+                    status: participantObj.status,
+                    violations: participantObj.violations,
+                    max_violations: participantObj.maxViolations,
+                    last_violation_reason: participantObj.lastViolationReason,
+                    violation_logs: participantObj.violationLogs,
+                    last_active: participantObj.lastActive,
+                    remaining_seconds: participantObj.remainingSeconds,
+                    answers: participantObj.answers,
+                    updated_at: new Date().toISOString()
+                });
+            });
+
+            if (supabaseClient && rowsToUpsert.length > 0) {
+                const { error } = await supabaseClient.from('participants').upsert(rowsToUpsert, { onConflict: 'username' });
+                if (error) {
+                    showToast('Gagal mengimpor CSV ke Supabase: ' + error.message, 'danger');
+                    btnProcess.disabled = false;
+                    btnProcess.textContent = 'Import ke Supabase';
+                    return;
+                }
+            }
+
+            appState.selectedMonitoringExamId = examId;
+            document.getElementById('import-csv-modal').classList.add('hidden');
+            btnProcess.textContent = 'Import ke Supabase';
+            showToast(`Berhasil mengimpor ${rowsToUpsert.length} peserta ke database!`, 'success');
             renderApp();
         }
 
@@ -1555,24 +1728,15 @@
                                 Pantau peserta secara langsung: status, pelanggaran, dan kunci ujian.
                             </p>
                         </div>
-                        <button onclick="openAddParticipantModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition self-start">
-                            <i data-lucide="user-plus" class="w-4 h-4"></i>
-                            <span>Tambah Peserta</span>
-                        </button>
-                    </div>
-
-                    <!-- Pilih Ujian Card -->
-                    <div class="bg-white rounded-2xl border border-slate-200/70 p-5 shadow-2xs">
-                        <label class="block text-sm font-bold text-slate-800 mb-3">Pilih Ujian</label>
-                        <div class="relative">
-                            <select onchange="appState.selectedMonitoringExamId = this.value; saveState(); renderApp();" class="w-full appearance-none px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-500">
-                                ${appState.exams.map(ex => `
-                                    <option value="${ex.id}" ${selectedExam && ex.id === selectedExam.id ? 'selected' : ''}>
-                                        ${ex.subject} - ${ex.className.replace('Kelas ', '')} (${ex.dateStr})
-                                    </option>
-                                `).join('')}
-                            </select>
-                            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                        <div class="flex flex-wrap items-center gap-2 self-start">
+                            <button onclick="openImportCsvModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition">
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                                <span>Import CSV / Excel</span>
+                            </button>
+                            <button onclick="openAddParticipantModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition">
+                                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                                <span>Tambah Peserta</span>
+                            </button>
                         </div>
                     </div>
 
