@@ -14,6 +14,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- Supabase JS Client SDK v2 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- SheetJS (XLSX) untuk Import & Export File Excel Asli (.xlsx / .xls) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -229,46 +231,46 @@
         </div>
     </div>
 
-    <!-- Modal: Import Massal Peserta via CSV / Excel -->
-    <div id="import-csv-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <!-- Modal: Import Massal Peserta via Excel (.xlsx / .xls) -->
+    <div id="import-excel-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="font-bold text-lg text-slate-800">Import Data Peserta (CSV / Excel)</h3>
-                <button onclick="document.getElementById('import-csv-modal').classList.add('hidden')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+                <h3 class="font-bold text-lg text-slate-800">Import Data Peserta dari Excel</h3>
+                <button onclick="document.getElementById('import-excel-modal').classList.add('hidden')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
             <div class="p-6 space-y-4">
-                <div class="p-4 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-center justify-between gap-3">
+                <div class="p-4 rounded-xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-3">
                     <div>
-                        <div class="text-xs font-bold text-indigo-900">1. Unduh Template Format CSV</div>
-                        <p class="text-[11px] text-indigo-700 mt-0.5">Buka file ini di Excel/Sheets, isi data siswa, lalu simpan kembali dalam format <strong>.CSV</strong>.</p>
+                        <div class="text-xs font-bold text-emerald-950">1. Unduh Template Excel (.xlsx)</div>
+                        <p class="text-[11px] text-emerald-800 mt-0.5">Buka langsung di Microsoft Excel, isi daftar siswa, lalu simpan.</p>
                     </div>
-                    <button type="button" onclick="downloadParticipantCsvTemplate()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold shadow-2xs transition">
+                    <button type="button" onclick="downloadParticipantExcelTemplate()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition">
                         <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                        <span>Template CSV</span>
+                        <span>Template Excel</span>
                     </button>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">2. Pilih Jadwal Ujian Tujuan</label>
-                    <select id="csv-target-exam" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 bg-white"></select>
+                    <select id="excel-target-exam" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 bg-white"></select>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">3. Unggah File CSV Peserta</label>
-                    <input type="file" id="csv-file-input" accept=".csv,.txt" onchange="previewCsvFile(event)" class="w-full px-3.5 py-2.5 rounded-xl border border-dashed border-slate-300 text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
-                    <p class="text-[11px] text-slate-400 mt-1.5">Kolom wajib: <code class="text-slate-600">Nama Lengkap, Username/NISN, Kelas, Ruang</code> (mendukung pemisah koma <code>,</code> maupun titik koma <code>;</code> dari Excel Indonesia).</p>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">3. Unggah File Excel (.xlsx / .xls)</label>
+                    <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" onchange="previewExcelFile(event)" class="w-full px-3.5 py-2.5 rounded-xl border border-dashed border-slate-300 text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                    <p class="text-[11px] text-slate-400 mt-1.5">Urutan kolom pada Sheet 1: <code class="text-slate-600">Nama Lengkap | Username/NISN | Kelas | Ruang</code></p>
                 </div>
 
-                <div id="csv-preview-box" class="hidden p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
-                    <div id="csv-preview-summary" class="font-bold text-slate-800 mb-1"></div>
-                    <div id="csv-preview-sample" class="text-[11px] text-slate-500 max-h-28 overflow-y-auto space-y-1"></div>
+                <div id="excel-preview-box" class="hidden p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+                    <div id="excel-preview-summary" class="font-bold text-slate-800 mb-1"></div>
+                    <div id="excel-preview-sample" class="text-[11px] text-slate-500 max-h-28 overflow-y-auto space-y-1"></div>
                 </div>
 
                 <div class="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-100">
-                    <button type="button" onclick="document.getElementById('import-csv-modal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
-                    <button type="button" id="btn-process-csv" onclick="processCsvImport()" disabled class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition">Import ke Supabase</button>
+                    <button type="button" onclick="document.getElementById('import-excel-modal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
+                    <button type="button" id="btn-process-excel" onclick="processExcelImport()" disabled class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition">Import ke Supabase</button>
                 </div>
             </div>
         </div>
@@ -529,8 +531,6 @@
                 checkStudentLockState();
                 renderApp();
 
-                // Jalankan WebSocket Realtime hanya di domain web normal (GitHub Pages / localhost),
-                // sedangkan di sandbox preview gunakan sinkronisasi HTTP otomatis agar bebas SecurityError
                 if (isSandboxedPreview || typeof WebSocket === 'undefined') {
                     startFallbackPolling();
                 } else {
@@ -1130,98 +1130,121 @@
             renderApp();
         }
 
-        let parsedCsvParticipants = [];
+        // =========================================================================
+        // IMPORT & EXPORT EXCEL (.XLSX / .XLS) PESERTA UJIAN
+        // =========================================================================
+        let parsedExcelParticipants = [];
 
-        function openImportCsvModal() {
+        function openImportExcelModal() {
             if (appState.exams.length === 0) {
                 showToast('Buat jadwal ujian terlebih dahulu sebelum import peserta!', 'warning');
                 return;
             }
-            const examSelect = document.getElementById('csv-target-exam');
+            const examSelect = document.getElementById('excel-target-exam');
             examSelect.innerHTML = appState.exams.map(ex => `<option value="${ex.id}" ${ex.id === appState.selectedMonitoringExamId ? 'selected' : ''}>${ex.subject} (${ex.className})</option>`).join('');
-            document.getElementById('csv-file-input').value = '';
-            document.getElementById('csv-preview-box').classList.add('hidden');
-            document.getElementById('btn-process-csv').disabled = true;
-            parsedCsvParticipants = [];
-            document.getElementById('import-csv-modal').classList.remove('hidden');
+            document.getElementById('excel-file-input').value = '';
+            document.getElementById('excel-preview-box').classList.add('hidden');
+            document.getElementById('btn-process-excel').disabled = true;
+            parsedExcelParticipants = [];
+            document.getElementById('import-excel-modal').classList.remove('hidden');
             lucide.createIcons();
         }
 
-        function downloadParticipantCsvTemplate() {
-            const csvContent = [
-                'Nama Lengkap,Username/NISN,Kelas,Ruang',
-                'Ahmad Fauzi,0081001,X-A,Ruang 1',
-                'Dewi Lestari,0081002,X-A,Ruang 1',
-                'Rizky Pratama,0081003,X-A,Ruang 1'
-            ].join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'template_peserta_cbt.csv';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast('Template CSV berhasil diunduh!', 'success');
+        function downloadParticipantExcelTemplate() {
+            if (typeof XLSX === 'undefined') {
+                showToast('Library Excel sedang dimuat, coba beberapa detik lagi.', 'warning');
+                return;
+            }
+            const rows = [
+                ['Nama Lengkap', 'Username/NISN', 'Kelas', 'Ruang'],
+                ['Ahmad Fauzi', '0081001', 'X-A', 'Ruang 1'],
+                ['Dewi Lestari', '0081002', 'X-A', 'Ruang 1'],
+                ['Rizky Pratama', '0081003', 'X-A', 'Ruang 1']
+            ];
+            const worksheet = XLSX.utils.aoa_to_sheet(rows);
+            worksheet['!cols'] = [
+                { wch: 28 },
+                { wch: 18 },
+                { wch: 14 },
+                { wch: 16 }
+            ];
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Peserta CBT');
+            XLSX.writeFile(workbook, 'template_peserta_cbt.xlsx');
+            showToast('Template Excel (.xlsx) berhasil diunduh!', 'success');
         }
 
-        function previewCsvFile(event) {
+        function previewExcelFile(event) {
             const file = event.target.files[0];
             if (!file) return;
+            if (typeof XLSX === 'undefined') {
+                showToast('Library pembaca Excel belum siap. Periksa koneksi internet Anda.', 'danger');
+                return;
+            }
             const reader = new FileReader();
             reader.onload = function(e) {
-                const text = e.target.result || '';
-                const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-                parsedCsvParticipants = [];
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-                lines.forEach((line, idx) => {
-                    const delimiter = line.includes(';') ? ';' : ',';
-                    const cols = line.split(delimiter).map(c => c.replace(/^"|"$/g, '').trim());
-                    if (cols.length < 2) return;
-                    // Lewati baris header
-                    if (idx === 0 && (cols[0].toLowerCase().includes('nama') || cols[1].toLowerCase().includes('nisn') || cols[1].toLowerCase().includes('username'))) {
-                        return;
+                    parsedExcelParticipants = [];
+                    rows.forEach((cols, idx) => {
+                        if (!cols || cols.length < 2) return;
+                        const col0 = String(cols[0] || '').trim();
+                        const col1 = String(cols[1] || '').trim();
+                        const col2 = String(cols[2] || '').trim();
+                        const col3 = String(cols[3] || '').trim();
+
+                        // Lewati baris header
+                        if (idx === 0 && (col0.toLowerCase().includes('nama') || col1.toLowerCase().includes('nisn') || col1.toLowerCase().includes('username'))) {
+                            return;
+                        }
+                        if (col0 && col1) {
+                            parsedExcelParticipants.push({
+                                name: col0,
+                                username: col1,
+                                className: col2 || 'Umum',
+                                room: col3 || 'Ruang 1'
+                            });
+                        }
+                    });
+
+                    const previewBox = document.getElementById('excel-preview-box');
+                    const summaryEl = document.getElementById('excel-preview-summary');
+                    const sampleEl = document.getElementById('excel-preview-sample');
+                    const btnProcess = document.getElementById('btn-process-excel');
+
+                    previewBox.classList.remove('hidden');
+                    if (parsedExcelParticipants.length === 0) {
+                        summaryEl.textContent = 'Tidak ditemukan baris data siswa yang valid pada file Excel.';
+                        sampleEl.innerHTML = '';
+                        btnProcess.disabled = true;
+                    } else {
+                        summaryEl.textContent = `Siap mengimpor ${parsedExcelParticipants.length} peserta dari sheet "${firstSheetName}":`;
+                        sampleEl.innerHTML = parsedExcelParticipants.slice(0, 8).map((p, i) => `<div>${i + 1}. <strong>${p.name}</strong> (${p.username}) — ${p.className} • ${p.room}</div>`).join('') +
+                            (parsedExcelParticipants.length > 8 ? `<div class="italic text-slate-400">...dan ${parsedExcelParticipants.length - 8} peserta lainnya</div>` : '');
+                        btnProcess.disabled = false;
                     }
-                    const name = cols[0];
-                    const username = cols[1];
-                    const className = cols[2] || 'Umum';
-                    const room = cols[3] || 'Ruang 1';
-                    if (name && username) {
-                        parsedCsvParticipants.push({ name, username, className, room });
-                    }
-                });
-
-                const previewBox = document.getElementById('csv-preview-box');
-                const summaryEl = document.getElementById('csv-preview-summary');
-                const sampleEl = document.getElementById('csv-preview-sample');
-                const btnProcess = document.getElementById('btn-process-csv');
-
-                previewBox.classList.remove('hidden');
-                if (parsedCsvParticipants.length === 0) {
-                    summaryEl.textContent = 'Tidak ditemukan baris data valid dalam file CSV.';
-                    sampleEl.innerHTML = '';
-                    btnProcess.disabled = true;
-                } else {
-                    summaryEl.textContent = `Siap mengimpor ${parsedCsvParticipants.length} peserta ujian:`;
-                    sampleEl.innerHTML = parsedCsvParticipants.slice(0, 8).map((p, i) => `<div>${i + 1}. <strong>${p.name}</strong> (${p.username}) — ${p.className} • ${p.room}</div>`).join('') +
-                        (parsedCsvParticipants.length > 8 ? `<div class="italic text-slate-400">...dan ${parsedCsvParticipants.length - 8} peserta lainnya</div>` : '');
-                    btnProcess.disabled = false;
+                } catch (err) {
+                    showToast('Gagal membaca file Excel: ' + err.message, 'danger');
                 }
             };
-            reader.readAsText(file);
+            reader.readAsArrayBuffer(file);
         }
 
-        async function processCsvImport() {
-            if (parsedCsvParticipants.length === 0) return;
-            const examId = document.getElementById('csv-target-exam').value;
+        async function processExcelImport() {
+            if (parsedExcelParticipants.length === 0) return;
+            const examId = document.getElementById('excel-target-exam').value;
             const exam = appState.exams.find(ex => ex.id === examId);
-            const btnProcess = document.getElementById('btn-process-csv');
+            const btnProcess = document.getElementById('btn-process-excel');
             btnProcess.disabled = true;
             btnProcess.textContent = 'Mengimpor...';
 
             const rowsToUpsert = [];
-            parsedCsvParticipants.forEach((item, idx) => {
+            parsedExcelParticipants.forEach((item, idx) => {
                 const existing = appState.participants.find(p => p.username.toLowerCase() === item.username.toLowerCase());
                 const participantObj = {
                     id: existing ? existing.id : `siswa-${Date.now()}-${idx}`,
@@ -1270,7 +1293,7 @@
             if (supabaseClient && rowsToUpsert.length > 0) {
                 const { error } = await supabaseClient.from('participants').upsert(rowsToUpsert, { onConflict: 'username' });
                 if (error) {
-                    showToast('Gagal mengimpor CSV ke Supabase: ' + error.message, 'danger');
+                    showToast('Gagal mengimpor Excel ke Supabase: ' + error.message, 'danger');
                     btnProcess.disabled = false;
                     btnProcess.textContent = 'Import ke Supabase';
                     return;
@@ -1278,9 +1301,34 @@
             }
 
             appState.selectedMonitoringExamId = examId;
-            document.getElementById('import-csv-modal').classList.add('hidden');
+            document.getElementById('import-excel-modal').classList.add('hidden');
             btnProcess.textContent = 'Import ke Supabase';
-            showToast(`Berhasil mengimpor ${rowsToUpsert.length} peserta ke database!`, 'success');
+            showToast(`Berhasil mengimpor ${rowsToUpsert.length} peserta dari Excel ke database!`, 'success');
+            renderApp();
+        }
+
+        function saveNewStaffUser(e) {
+            e.preventDefault();
+            const name = document.getElementById('staff-name').value.trim();
+            const username = document.getElementById('staff-username').value.trim();
+            const password = document.getElementById('staff-password').value.trim();
+            const role = document.getElementById('staff-role').value;
+
+            if (appState.staffUsers.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+                showToast('Username staf sudah digunakan!', 'danger');
+                return;
+            }
+
+            const newStaff = {
+                id: 'staff-' + Date.now(),
+                name,
+                username,
+                password,
+                role
+            };
+            appState.staffUsers.push(newStaff);
+            syncStaffToSupabase(newStaff);
+            showToast(`Akun ${role === 'admin' ? 'Administrator' : 'Pengawas'} untuk ${name} berhasil ditambahkan!`, 'success');
             renderApp();
         }
 
@@ -1729,9 +1777,9 @@
                             </p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 self-start">
-                            <button onclick="openImportCsvModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition">
+                            <button onclick="openImportExcelModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition">
                                 <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                                <span>Import CSV / Excel</span>
+                                <span>Import Excel (.xlsx)</span>
                             </button>
                             <button onclick="openAddParticipantModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition">
                                 <i data-lucide="user-plus" class="w-4 h-4"></i>
@@ -1740,10 +1788,20 @@
                         </div>
                     </div>
 
+                    <!-- Pilih Ujian Dropdown -->
+                    ${appState.exams.length > 0 ? `
+                        <div class="bg-white rounded-2xl border border-slate-200/70 p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Pilih Jadwal Ujian:</span>
+                            <select onchange="appState.selectedMonitoringExamId = this.value; renderApp();" class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-800 bg-slate-50 focus:outline-none focus:border-indigo-500 sm:min-w-[300px]">
+                                ${appState.exams.map(ex => `<option value="${ex.id}" ${selectedExam && ex.id === selectedExam.id ? 'selected' : ''}>${ex.subject} — ${ex.className} (${ex.status})</option>`).join('')}
+                            </select>
+                        </div>
+                    ` : ''}
+
                     <!-- Peserta & Status Cards -->
                     <div class="bg-white rounded-2xl border border-slate-200/70 p-5 sm:p-6 shadow-2xs">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-base sm:text-lg font-bold text-slate-900">Peserta</h2>
+                            <h2 class="text-base sm:text-lg font-bold text-slate-900">Peserta (${filteredParticipants.length})</h2>
                             <button onclick="initSupabaseRealtime(); showToast('Data monitoring disegarkan', 'info')" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700 transition">
                                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
                                 <span>Segarkan</span>
@@ -1790,7 +1848,7 @@
                                 <tbody class="divide-y divide-slate-100 text-sm">
                                     ${filteredParticipants.length === 0 ? `
                                         <tr>
-                                            <td colspan="6" class="py-8 text-center text-slate-400 text-xs">Belum ada peserta terdaftar pada ujian ini. Klik "+ Tambah Peserta".</td>
+                                            <td colspan="6" class="py-8 text-center text-slate-400 text-xs">Belum ada peserta terdaftar pada ujian ini. Klik "Import Excel (.xlsx)" atau "+ Tambah Peserta".</td>
                                         </tr>
                                     ` : filteredParticipants.map(p => {
                                         let badgeClass = 'bg-slate-100 text-slate-600';
@@ -1805,7 +1863,7 @@
                                             <tr class="hover:bg-slate-50/70 transition">
                                                 <td class="py-3.5 px-3">
                                                     <div class="font-bold text-slate-900">${p.name}</div>
-                                                    <div class="text-xs text-slate-400">${p.username}</div>
+                                                    <div class="text-xs text-slate-400">${p.username} • ${p.className}</div>
                                                 </td>
                                                 <td class="py-3.5 px-3 text-slate-600 text-xs sm:text-sm">${p.room}</td>
                                                 <td class="py-3.5 px-3">
