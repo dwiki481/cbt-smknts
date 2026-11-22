@@ -247,13 +247,13 @@
         // =========================================================================
         // 0. KONFIGURASI SUPABASE (GANTI DENGAN URL & ANON KEY PROYEK ANDA)
         // =========================================================================
-        const SUPABASE_URL = 'https://ISI-PROJECT-ID-ANDA.supabase.co';
-        const SUPABASE_ANON_KEY = 'ISI-ANON-PUBLIC-KEY-ANDA';
+        const SUPABASE_URL = 'https://ihxfufwpsefvsfoqxgxm.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloeGZ1Zndwc2VmdnNmb3F4Z3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNjIwNDgsImV4cCI6MjExMDkzODA0OH0.cY6N1kc-QX0iKZKH5Li7TiQTLryDisIA3PMuWKAuze4';
 
         const isSupabaseConfigured =
             SUPABASE_URL.startsWith('https://') &&
-            !SUPABASE_URL.includes('ISI-PROJECT-ID-ANDA') &&
-            SUPABASE_ANON_KEY !== 'ISI-ANON-PUBLIC-KEY-ANDA';
+            !SUPABASE_URL.includes('https://ihxfufwpsefvsfoqxgxm.supabase.co') &&
+            SUPABASE_ANON_KEY !== 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloeGZ1Zndwc2VmdnNmb3F4Z3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNjIwNDgsImV4cCI6MjExMDkzODA0OH0.cY6N1kc-QX0iKZKH5Li7TiQTLryDisIA3PMuWKAuze4';
 
         const supabaseClient = isSupabaseConfigured
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -269,13 +269,13 @@
             tokenCountdown: 300,
             selectedMonitoringExamId: 'exam-matematika',
             settings: {
-                schoolName: 'SMK Nusantara',
+                schoolName: 'SMK Negeri Tanjung Sari',
                 portalTitle: 'Portal Ujian Digital',
                 academicYear: '2026/2027'
             },
             staffUsers: [
                 { id: 'staff-admin', name: 'Administrator', username: 'admin', password: 'admin123', role: 'admin' },
-                { id: 'staff-pengawas1', name: 'Budi Santoso, S.Pd', username: 'pengawas1', password: 'guru123', role: 'pengawas' }
+                { id: 'staff-pengawas1', name: 'Dwiki Agus Saputra, S.Kom', username: 'pengawas1', password: 'guru123', role: 'pengawas' }
             ],
             exams: [
                 {
