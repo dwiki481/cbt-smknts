@@ -247,13 +247,13 @@
         // =========================================================================
         // 0. KONFIGURASI SUPABASE (ISI DENGAN URL & ANON KEY PROYEK ANDA)
         // =========================================================================
-        const SUPABASE_URL = 'https://ISI-PROJECT-ID-ANDA.supabase.co';
-        const SUPABASE_ANON_KEY = 'ISI-ANON-PUBLIC-KEY-ANDA';
+        const SUPABASE_URL = 'https://ihxfufwpsefvsfoqxgxm.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloeGZ1Zndwc2VmdnNmb3F4Z3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNjIwNDgsImV4cCI6MjExMDkzODA0OH0.cY6N1kc-QX0iKZKH5Li7TiQTLryDisIA3PMuWKAuze4';
         const isSupabaseConfigured =
             SUPABASE_URL &&
-            !SUPABASE_URL.includes('ISI-PROJECT-ID-ANDA') &&
+            !SUPABASE_URL.includes('https://ihxfufwpsefvsfoqxgxm.supabase.co') &&
             SUPABASE_ANON_KEY &&
-            !SUPABASE_ANON_KEY.includes('ISI-ANON-PUBLIC-KEY-ANDA');
+            !SUPABASE_ANON_KEY.includes('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloeGZ1Zndwc2VmdnNmb3F4Z3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNjIwNDgsImV4cCI6MjExMDkzODA0OH0.cY6N1kc-QX0iKZKH5Li7TiQTLryDisIA3PMuWKAuze4');
         const supabaseClient = isSupabaseConfigured && window.supabase
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
             : null;
