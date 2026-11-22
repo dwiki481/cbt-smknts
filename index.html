@@ -245,142 +245,23 @@
 
     <script>
         // =========================================================================
-        // 0. KONFIGURASI SUPABASE (GANTI DENGAN URL & ANON KEY PROYEK ANDA)
+        // 0. KONFIGURASI SUPABASE (ISI DENGAN URL & ANON KEY PROYEK ANDA)
         // =========================================================================
-        const SUPABASE_URL = 'https://ihxfufwpsefvsfoqxgxm.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloeGZ1Zndwc2VmdnNmb3F4Z3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNjIwNDgsImV4cCI6MjExMDkzODA0OH0.cY6N1kc-QX0iKZKH5Li7TiQTLryDisIA3PMuWKAuze4';
-
+        const SUPABASE_URL = 'https://ISI-PROJECT-ID-ANDA.supabase.co';
+        const SUPABASE_ANON_KEY = 'ISI-ANON-PUBLIC-KEY-ANDA';
         const isSupabaseConfigured =
-            SUPABASE_URL.startsWith('https://') &&
-            !SUPABASE_URL.includes('https://ihxfufwpsefvsfoqxgxm.supabase.co') &&
-            SUPABASE_ANON_KEY !== 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloeGZ1Zndwc2VmdnNmb3F4Z3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNjIwNDgsImV4cCI6MjExMDkzODA0OH0.cY6N1kc-QX0iKZKH5Li7TiQTLryDisIA3PMuWKAuze4';
-
-        const supabaseClient = isSupabaseConfigured
+            SUPABASE_URL &&
+            !SUPABASE_URL.includes('ISI-PROJECT-ID-ANDA') &&
+            SUPABASE_ANON_KEY &&
+            !SUPABASE_ANON_KEY.includes('ISI-ANON-PUBLIC-KEY-ANDA');
+        const supabaseClient = isSupabaseConfigured && window.supabase
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
             : null;
 
         // =========================================================================
-        // 1. STATE MANAGEMENT & SINKRONISASI SUPABASE REALTIME
+        // 1. STATE MANAGEMENT & SINKRONISASI SUPABASE REALTIME (100% CLOUD)
         // =========================================================================
-        const STORAGE_KEY = 'portal_ujian_digital_prod_v1';
-        const SESSION_KEY = 'portal_ujian_session_prod_v1';
-
-        const initialData = {
-            tokenCountdown: 300,
-            selectedMonitoringExamId: 'exam-matematika',
-            settings: {
-                schoolName: 'SMK Negeri Tanjung Sari',
-                portalTitle: 'Portal Ujian Digital',
-                academicYear: '2026/2027'
-            },
-            staffUsers: [
-                { id: 'staff-admin', name: 'Administrator', username: 'admin', password: 'admin123', role: 'admin' },
-                { id: 'staff-pengawas1', name: 'Dwiki Agus Saputra, S.Kom', username: 'pengawas1', password: 'guru123', role: 'pengawas' }
-            ],
-            exams: [
-                {
-                    id: 'exam-matematika',
-                    subject: 'Matematika',
-                    className: 'Kelas X-A',
-                    dateStr: 'Senin, 23 November 2026',
-                    sessionStr: 'Sesi 1 • 07:30-09:30',
-                    status: 'Berlangsung',
-                    token: '19281',
-                    durationSeconds: 5400,
-                    maxViolations: 3,
-                    gformUrl: '',
-                    formTitle: 'Penilaian Akhir Semester — Matematika'
-                },
-                {
-                    id: 'exam-bindo',
-                    subject: 'Bahasa Indonesia',
-                    className: 'Kelas X-B',
-                    dateStr: 'Senin, 23 November 2026',
-                    sessionStr: 'Sesi 2 • 10:00-12:00',
-                    status: 'Belum Mulai',
-                    token: '75914',
-                    durationSeconds: 5400,
-                    maxViolations: 3,
-                    gformUrl: '',
-                    formTitle: 'Penilaian Akhir Semester — Bahasa Indonesia'
-                }
-            ],
-            participants: [
-                {
-                    id: 'siswa001',
-                    name: 'Ahmad Fauzi',
-                    username: 'siswa001',
-                    email: 'ahmad.fauzi@smk-nusantara.sch.id',
-                    className: 'X-A',
-                    room: 'Ruang 1',
-                    examId: 'exam-matematika',
-                    status: 'Belum Masuk',
-                    violations: 0,
-                    maxViolations: 3,
-                    lastViolationReason: '',
-                    violationLogs: [],
-                    lastActive: '-',
-                    remainingSeconds: 5400,
-                    answers: {}
-                },
-                {
-                    id: 'siswa002',
-                    name: 'Dewi Lestari',
-                    username: 'siswa002',
-                    email: 'dewi.lestari@smk-nusantara.sch.id',
-                    className: 'X-A',
-                    room: 'Ruang 1',
-                    examId: 'exam-matematika',
-                    status: 'Belum Masuk',
-                    violations: 0,
-                    maxViolations: 3,
-                    lastViolationReason: '',
-                    violationLogs: [],
-                    lastActive: '-',
-                    remainingSeconds: 5400,
-                    answers: {}
-                },
-                {
-                    id: 'siswa003',
-                    name: 'Rizky Pratama',
-                    username: 'siswa003',
-                    email: 'rizky.pratama@smk-nusantara.sch.id',
-                    className: 'X-A',
-                    room: 'Ruang 1',
-                    examId: 'exam-matematika',
-                    status: 'Belum Masuk',
-                    violations: 0,
-                    maxViolations: 3,
-                    lastViolationReason: '',
-                    violationLogs: [],
-                    lastActive: '-',
-                    remainingSeconds: 5400,
-                    answers: {}
-                }
-            ],
-            questionsByExam: {
-                'exam-matematika': [
-                    {
-                        id: 'q1',
-                        text: 'Bentuk persamaan a + b = b + a menunjukkan salah satu sifat operasi penjumlahan pada bilangan bulat, yaitu sifat ....',
-                        options: ['Asosiatif', 'Komutatif', 'Distributif', 'Identitas'],
-                        required: true
-                    },
-                    {
-                        id: 'q2',
-                        text: 'Hasil dari (-15) + 8 × 3 - (-12) : 4 adalah ....',
-                        options: ['12', '6', '-18', '24'],
-                        required: true
-                    },
-                    {
-                        id: 'q3',
-                        text: 'Jika p = -3, q = 5, dan r = -2, maka nilai dari 2p - 3q + 4r adalah ....',
-                        options: ['-29', '-13', '13', '29'],
-                        required: true
-                    }
-                ]
-            }
-        };
+        const SESSION_KEY = 'portal_ujian_session_prod_v2';
 
         let session = {
             view: 'login', // 'login' | 'student' | 'proctor'
@@ -391,20 +272,25 @@
             activeStudentId: null,
             activeExamId: null,
             violationModalOpen: false,
-            isLoadingCloud: isSupabaseConfigured
+            isLoadingCloud: true
         };
 
-        var appState = JSON.parse(JSON.stringify(initialData));
+        var appState = {
+            tokenCountdown: 300,
+            selectedMonitoringExamId: '',
+            settings: {
+                schoolName: 'Portal Sekolah',
+                portalTitle: 'Portal Ujian Digital',
+                academicYear: '2026/2027'
+            },
+            staffUsers: [],
+            exams: [],
+            participants: [],
+            questionsByExam: {}
+        };
 
-        function loadLocalState() {
+        function loadSessionState() {
             try {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                if (raw) {
-                    const parsed = JSON.parse(raw);
-                    if (parsed && Array.isArray(parsed.exams)) {
-                        appState = Object.assign({}, appState, parsed);
-                    }
-                }
                 const savedSess = sessionStorage.getItem(SESSION_KEY);
                 if (savedSess) {
                     const parsedSess = JSON.parse(savedSess);
@@ -415,7 +301,6 @@
 
         function saveState() {
             try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
                 sessionStorage.setItem(SESSION_KEY, JSON.stringify({
                     view: session.view,
                     loginTab: session.loginTab,
@@ -433,7 +318,7 @@
         // =========================================================================
         async function syncExamToSupabase(exam) {
             if (!supabaseClient || !exam) return;
-            await supabaseClient.from('exams').upsert({
+            const { error } = await supabaseClient.from('exams').upsert({
                 id: exam.id,
                 subject: exam.subject,
                 class_name: exam.className,
@@ -447,11 +332,12 @@
                 form_title: exam.formTitle || '',
                 updated_at: new Date().toISOString()
             });
+            if (error) showToast('Gagal menyimpan jadwal ke Supabase: ' + error.message, 'danger');
         }
 
         async function syncParticipantToSupabase(p) {
             if (!supabaseClient || !p) return;
-            await supabaseClient.from('participants').upsert({
+            const { error } = await supabaseClient.from('participants').upsert({
                 id: p.id,
                 name: p.name,
                 username: p.username,
@@ -469,48 +355,56 @@
                 answers: p.answers || {},
                 updated_at: new Date().toISOString()
             });
+            if (error) showToast('Gagal sinkronisasi peserta: ' + error.message, 'danger');
         }
 
         async function syncStaffToSupabase(staff) {
             if (!supabaseClient || !staff) return;
-            await supabaseClient.from('staff_users').upsert({
+            const { error } = await supabaseClient.from('staff_users').upsert({
                 id: staff.id,
                 name: staff.name,
                 username: staff.username,
                 password: staff.password,
                 role: staff.role
             });
+            if (error) showToast('Gagal menyimpan staf ke Supabase: ' + error.message, 'danger');
         }
 
         async function syncSettingsToSupabase() {
             if (!supabaseClient) return;
-            await supabaseClient.from('school_settings').upsert({
+            const { error } = await supabaseClient.from('school_settings').upsert({
                 id: 1,
                 school_name: appState.settings.schoolName,
                 portal_title: appState.settings.portalTitle,
                 academic_year: appState.settings.academicYear,
                 updated_at: new Date().toISOString()
             });
+            if (error) showToast('Gagal menyimpan pengaturan ke Supabase: ' + error.message, 'danger');
         }
 
         async function initSupabaseRealtime() {
             if (!supabaseClient) {
                 session.isLoadingCloud = false;
                 renderApp();
+                showToast('Konfigurasi SUPABASE_URL dan SUPABASE_ANON_KEY belum diisi di kode HTML!', 'danger');
                 return;
             }
             try {
                 const [
-                    { data: examsData },
-                    { data: participantsData },
-                    { data: staffData },
-                    { data: settingsData }
+                    { data: examsData, error: errExams },
+                    { data: participantsData, error: errParts },
+                    { data: staffData, error: errStaff },
+                    { data: settingsData, error: errSet }
                 ] = await Promise.all([
                     supabaseClient.from('exams').select('*').order('subject', { ascending: true }),
                     supabaseClient.from('participants').select('*').order('name', { ascending: true }),
                     supabaseClient.from('staff_users').select('*'),
                     supabaseClient.from('school_settings').select('*').eq('id', 1).maybeSingle()
                 ]);
+
+                if (errExams || errParts || errStaff || errSet) {
+                    throw new Error((errExams || errParts || errStaff || errSet).message);
+                }
 
                 if (settingsData) {
                     appState.settings = {
@@ -521,55 +415,50 @@
                     document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
                 }
 
-                if (staffData && staffData.length > 0) {
-                    appState.staffUsers = staffData;
+                appState.staffUsers = staffData || [];
+
+                appState.exams = (examsData || []).map(row => ({
+                    id: row.id,
+                    subject: row.subject,
+                    className: row.class_name,
+                    dateStr: row.date_str,
+                    sessionStr: row.session_str,
+                    status: row.status,
+                    token: row.token,
+                    durationSeconds: row.duration_seconds,
+                    maxViolations: row.max_violations,
+                    gformUrl: row.gform_url || '',
+                    formTitle: row.form_title || ''
+                }));
+
+                if (appState.exams.length > 0 && !appState.exams.some(e => e.id === appState.selectedMonitoringExamId)) {
+                    appState.selectedMonitoringExamId = appState.exams[0].id;
                 }
 
-                if (examsData && examsData.length > 0) {
-                    appState.exams = examsData.map(row => ({
-                        id: row.id,
-                        subject: row.subject,
-                        className: row.class_name,
-                        dateStr: row.date_str,
-                        sessionStr: row.session_str,
-                        status: row.status,
-                        token: row.token,
-                        durationSeconds: row.duration_seconds,
-                        maxViolations: row.max_violations,
-                        gformUrl: row.gform_url || '',
-                        formTitle: row.form_title || ''
-                    }));
-                    if (!appState.exams.some(e => e.id === appState.selectedMonitoringExamId)) {
-                        appState.selectedMonitoringExamId = appState.exams[0].id;
-                    }
-                }
-
-                if (participantsData && participantsData.length > 0) {
-                    appState.participants = participantsData.map(row => ({
-                        id: row.id,
-                        name: row.name,
-                        username: row.username,
-                        email: row.email || '',
-                        className: row.class_name,
-                        room: row.room,
-                        examId: row.exam_id,
-                        status: row.status,
-                        violations: row.violations,
-                        maxViolations: row.max_violations,
-                        lastViolationReason: row.last_violation_reason || '',
-                        violationLogs: row.violation_logs || [],
-                        lastActive: row.last_active || '-',
-                        remainingSeconds: row.remaining_seconds,
-                        answers: row.answers || {}
-                    }));
-                }
+                appState.participants = (participantsData || []).map(row => ({
+                    id: row.id,
+                    name: row.name,
+                    username: row.username,
+                    email: row.email || '',
+                    className: row.class_name,
+                    room: row.room,
+                    examId: row.exam_id,
+                    status: row.status,
+                    violations: row.violations,
+                    maxViolations: row.max_violations,
+                    lastViolationReason: row.last_violation_reason || '',
+                    violationLogs: row.violation_logs || [],
+                    lastActive: row.last_active || '-',
+                    remainingSeconds: row.remaining_seconds,
+                    answers: row.answers || {}
+                }));
 
                 session.isLoadingCloud = false;
                 saveState();
                 checkStudentLockState();
                 renderApp();
 
-                // Subscribe ke perubahan Realtime Postgres
+                // Subscribe ke perubahan Realtime Postgres (exams, participants, staff_users, school_settings)
                 supabaseClient
                     .channel('cbt-production-realtime')
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'exams' }, (payload) => {
@@ -594,7 +483,6 @@
                             if (idx >= 0) appState.exams[idx] = mapped;
                             else appState.exams.push(mapped);
                         }
-                        saveState();
                         renderApp();
                     })
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, (payload) => {
@@ -623,19 +511,40 @@
                             if (idx >= 0) appState.participants[idx] = mapped;
                             else appState.participants.push(mapped);
                         }
-                        saveState();
                         checkStudentLockState();
                         renderApp();
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_users' }, (payload) => {
+                        if (payload.eventType === 'DELETE') {
+                            appState.staffUsers = appState.staffUsers.filter(u => u.id !== payload.old.id);
+                        } else {
+                            const idx = appState.staffUsers.findIndex(u => u.id === payload.new.id);
+                            if (idx >= 0) appState.staffUsers[idx] = payload.new;
+                            else appState.staffUsers.push(payload.new);
+                        }
+                        renderApp();
+                    })
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'school_settings' }, (payload) => {
+                        if (payload.new) {
+                            appState.settings = {
+                                schoolName: payload.new.school_name,
+                                portalTitle: payload.new.portal_title,
+                                academicYear: payload.new.academic_year
+                            };
+                            document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
+                            renderApp();
+                        }
                     })
                     .subscribe();
             } catch (err) {
                 console.error('Supabase init error:', err);
                 session.isLoadingCloud = false;
                 renderApp();
+                showToast('Gagal memuat data dari Supabase: ' + err.message, 'danger');
             }
         }
 
-        loadLocalState();
+        loadSessionState();
 
         // =========================================================================
         // 3. HELPER FORMATTING & TOAST
@@ -936,8 +845,8 @@
 
                     <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
                         <span class="flex items-center gap-1.5">
-                            <span class="w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-500' : 'bg-amber-400'}"></span>
-                            ${isSupabaseConfigured ? 'Database Cloud Aktif' : 'Mode Penyimpanan Lokal'}
+                            <span class="w-2 h-2 rounded-full ${isSupabaseConfigured ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                            ${session.isLoadingCloud ? 'Menghubungkan ke Supabase...' : (isSupabaseConfigured ? 'Terhubung ke Supabase Cloud' : 'Supabase Belum Dikonfigurasi')}
                         </span>
                         <span>CBT Google Form Engine</span>
                     </div>
@@ -1033,11 +942,17 @@
         function renderStudentExamView() {
             const student = appState.participants.find(p => p.id === session.activeStudentId);
             if (!student) {
+                if (session.isLoadingCloud) {
+                    return `<div class="min-h-screen flex items-center justify-center text-sm text-slate-500">Memuat data sesi ujian dari Supabase...</div>`;
+                }
                 logoutUser();
                 return '';
             }
             const exam = appState.exams.find(e => e.id === student.examId) || appState.exams[0];
-            const questions = appState.questionsByExam[exam.id] || appState.questionsByExam['exam-matematika'] || [];
+            if (!exam) {
+                return `<div class="min-h-screen flex items-center justify-center text-sm text-slate-500">Jadwal ujian tidak ditemukan di database.</div>`;
+            }
+            const questions = appState.questionsByExam[exam.id] || [];
             const maxV = exam.maxViolations || 3;
 
             return `
@@ -1092,84 +1007,12 @@
                             <iframe src="${exam.gformUrl}" class="w-full h-[80vh] border-0" frameborder="0" marginheight="0" marginwidth="0">Memuat Google Form...</iframe>
                         </div>
                     ` : `
-                        <div class="max-w-[720px] mx-auto space-y-3.5">
-                            <div class="bg-white rounded-xl shadow-xs border border-slate-200/90 overflow-hidden">
-                                <div class="h-2.5 bg-[#673AB7] w-full"></div>
-                                <div class="p-6 sm:p-7">
-                                    <h2 class="text-2xl sm:text-[28px] font-normal text-slate-900 mb-3">${exam.formTitle || ('Ujian ' + exam.subject + ' — ' + exam.className)}</h2>
-                                    <div class="border-t border-slate-100 pt-3 flex items-center justify-between text-xs sm:text-sm text-slate-600">
-                                        <div>
-                                            <span class="font-semibold text-slate-700">${student.name} (${student.username})</span>
-                                            <div class="flex items-center gap-1.5 text-slate-500 text-xs mt-1.5">
-                                                <i data-lucide="shield" class="w-3.5 h-3.5"></i>
-                                                <span>Sesi Ujian Terkunci Layar Penuh</span>
-                                            </div>
-                                        </div>
-                                        <div class="text-slate-400" title="Jawaban tersimpan otomatis">
-                                            <i data-lucide="cloud-check" class="w-5 h-5"></i>
-                                        </div>
-                                    </div>
-                                    <div class="border-t border-slate-100 mt-3 pt-3 text-xs text-rose-600">
-                                        * Menunjukkan pertanyaan yang wajib diisi
-                                    </div>
-                                </div>
+                        <div class="max-w-xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
+                            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3">
+                                <i data-lucide="alert-circle" class="w-6 h-6"></i>
                             </div>
-
-                            <div class="bg-white rounded-xl shadow-xs border border-slate-200/90 p-6">
-                                <label class="block text-sm sm:text-base font-medium text-slate-900 mb-4">
-                                    Nama Lengkap <span class="text-rose-600">*</span>
-                                </label>
-                                <input type="text"
-                                    value="${student.answers.fullName !== undefined ? student.answers.fullName : student.name}"
-                                    oninput="saveStudentAnswer('fullName', this.value)"
-                                    placeholder="Jawaban Anda"
-                                    class="w-full sm:w-2/3 py-1.5 text-sm text-slate-800 gform-input bg-transparent">
-                            </div>
-
-                            <div class="bg-white rounded-xl shadow-xs border border-slate-200/90 p-6">
-                                <label class="block text-sm sm:text-base font-medium text-slate-900 mb-4">
-                                    Kelas <span class="text-rose-600">*</span>
-                                </label>
-                                <input type="text"
-                                    value="${student.answers.classInput !== undefined ? student.answers.classInput : student.className}"
-                                    oninput="saveStudentAnswer('classInput', this.value)"
-                                    placeholder="Jawaban Anda"
-                                    class="w-full sm:w-2/3 py-1.5 text-sm text-slate-800 gform-input bg-transparent">
-                            </div>
-
-                            ${questions.map(q => `
-                                <div class="bg-white rounded-xl shadow-xs border border-slate-200/90 p-6">
-                                    <div class="flex items-start justify-between gap-2 mb-4">
-                                        <p class="text-sm sm:text-[15px] text-slate-900 leading-relaxed">${q.text}</p>
-                                        ${q.required ? '<span class="text-rose-600 text-sm shrink-0">*</span>' : ''}
-                                    </div>
-                                    <div class="space-y-3">
-                                        ${q.options.map(opt => {
-                                            const isChecked = student.answers[q.id] === opt;
-                                            return `
-                                            <label class="flex items-center gap-3 cursor-pointer group py-0.5">
-                                                <input type="radio" name="${q.id}" value="${opt}"
-                                                    ${isChecked ? 'checked' : ''}
-                                                    onchange="saveStudentAnswer('${q.id}', '${opt.replace(/'/g, "\\'")}')"
-                                                    class="w-4 h-4 gform-radio cursor-pointer">
-                                                <span class="text-sm text-slate-800 group-hover:text-slate-950">${opt}</span>
-                                            </label>
-                                            `;
-                                        }).join('')}
-                                    </div>
-                                </div>
-                            `).join('')}
-
-                            <div class="flex items-center justify-between pt-2">
-                                <button type="button" onclick="confirmFinishStudentExam()"
-                                    class="px-6 py-2.5 rounded-md bg-[#673AB7] hover:bg-[#5E35B1] text-white font-medium text-sm shadow-xs transition">
-                                    Kirim
-                                </button>
-                                <button type="button" onclick="clearStudentAnswers()"
-                                    class="text-xs font-medium text-[#673AB7] hover:bg-purple-100/60 px-3 py-2 rounded-md transition">
-                                    Kosongkan formulir
-                                </button>
-                            </div>
+                            <h3 class="font-bold text-base text-slate-900 mb-1">URL Google Form Belum Diatur</h3>
+                            <p class="text-xs sm:text-sm text-slate-500">Pengawas/Administrator belum menyematkan tautan Google Form (<code class="text-slate-700">?embedded=true</code>) untuk mata pelajaran <strong>${exam.subject}</strong>.</p>
                         </div>
                     `}
                 </main>
