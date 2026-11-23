@@ -68,6 +68,37 @@
     <!-- Main App Root -->
     <div id="app" class="flex-1 flex flex-col"></div>
 
+    <!-- Dedicated Persistent Exam Wrapper (Mencegah Iframe Google Form Ter-reload) -->
+    <div id="persistent-exam-wrapper" class="hidden fixed inset-0 z-40 flex flex-col bg-[#F0EBF8]">
+        <header class="bg-white border-b border-slate-200/80 px-4 sm:px-6 h-16 flex items-center justify-between shrink-0 shadow-2xs">
+            <div>
+                <div id="persistent-exam-subject" class="font-bold text-sm sm:text-base text-slate-900 leading-tight">Mata Pelajaran</div>
+                <div id="persistent-exam-student" class="text-[11px] text-slate-500">Siswa • Kelas</div>
+            </div>
+            <div class="flex items-center gap-3 sm:gap-4">
+                <div class="text-right">
+                    <div class="text-[9px] font-bold tracking-wider uppercase text-slate-400">SISA WAKTU</div>
+                    <div id="student-timer-display" class="font-mono font-bold text-sm sm:text-base text-slate-900 leading-tight">00:00:00</div>
+                </div>
+                <button type="button" onclick="openFinishExamModal()" class="px-3.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 font-semibold text-xs transition">
+                    Selesai
+                </button>
+            </div>
+        </header>
+
+        <div id="one-minute-warning-banner" class="hidden bg-rose-600 text-white px-4 py-2 text-center flex items-center justify-center gap-2 text-xs sm:text-sm font-bold shadow-md shrink-0">
+            <i data-lucide="alarm-clock" class="w-4 h-4 shrink-0"></i>
+            <span>PERHATIAN! Sisa waktu ujian tinggal 1 MENIT! Segera tekan tombol KIRIM (SUBMIT) di Google Form sekarang!</span>
+        </div>
+
+        <div class="bg-[#FFFBEB] border-b border-amber-200/70 px-4 py-1.5 text-center flex items-center justify-center gap-2 text-[11px] sm:text-xs text-amber-800 shrink-0">
+            <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
+            <span>Mode ujian aktif — jangan keluar layar penuh atau pindah tab. Pastikan menekan <strong>Kirim (Submit)</strong> di Google Form sebelum menekan Selesai.</span>
+        </div>
+
+        <div id="persistent-iframe-container" class="flex-1 w-full max-w-4xl mx-auto my-3 px-3 sm:px-0 flex flex-col overflow-hidden"></div>
+    </div>
+
     <!-- Modal: Input Token Ujian Siswa -->
     <div id="token-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
@@ -1212,6 +1243,7 @@
                 document.exitFullscreen().catch(() => {});
             }
             document.getElementById('locked-screen').classList.add('hidden');
+            teardownPersistentExamWrapper();
             session.view = 'student_dashboard';
             saveState();
             renderApp();
@@ -1898,6 +1930,7 @@
                 document.exitFullscreen().catch(() => {});
             }
 
+            teardownPersistentExamWrapper();
             showToast(autoSubmit ? 'Waktu habis! Jawaban otomatis dikirim.' : 'Ujian selesai! Anda kembali ke Dashboard Jadwal Ujian.', 'success');
             session.view = 'student_dashboard';
             saveState();
@@ -1907,15 +1940,82 @@
         // =========================================================================
         // 8. RENDER VIEWS (LOGIN, DASHBOARD SISWA, RUANG UJIAN, & DASHBOARD ADMIN)
         // =========================================================================
+        let mountedExamIframeKey = '';
+
+        function mountPersistentExamWrapper() {
+            const wrapper = document.getElementById('persistent-exam-wrapper');
+            const container = document.getElementById('persistent-iframe-container');
+            const student = appState.participants.find(p => p.id === session.activeStudentId);
+            const exam = appState.exams.find(e => e.id === session.activeExamId);
+            if (!wrapper || !container || !student || !exam) return;
+
+            document.getElementById('persistent-exam-subject').textContent = exam.subject;
+            document.getElementById('persistent-exam-student').textContent = `${student.name} (${student.username}) • ${student.className}`;
+            const timerEl = document.getElementById('student-timer-display');
+            if (timerEl) timerEl.textContent = formatTimeHMS(student.remainingSeconds);
+
+            const bannerEl = document.getElementById('one-minute-warning-banner');
+            if (bannerEl) {
+                if (student.remainingSeconds <= 60) bannerEl.classList.remove('hidden');
+                else bannerEl.classList.add('hidden');
+            }
+
+            wrapper.classList.remove('hidden');
+
+            const iframeKey = `${student.id}_${exam.id}_${exam.gformUrl || ''}`;
+            if (mountedExamIframeKey === iframeKey && container.children.length > 0) {
+                return;
+            }
+            mountedExamIframeKey = iframeKey;
+
+            const hasEmbeddedGForm = exam.gformUrl && exam.gformUrl.trim().length > 0;
+            if (hasEmbeddedGForm) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col">
+                        <iframe id="exam-gform-iframe" src="${exam.gformUrl}" class="w-full h-full flex-1 border-0" allowfullscreen>Memuat Google Form...</iframe>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="flex-1 flex items-center justify-center p-4">
+                        <div class="max-w-md w-full bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
+                            <h3 class="text-lg font-bold text-slate-900 mb-1.5">Link Google Form Belum Diatur</h3>
+                            <p class="text-xs sm:text-sm text-slate-500 leading-relaxed mb-5">
+                                Admin belum menyematkan tautan Google Form untuk mata pelajaran <strong>${exam.subject}</strong>.
+                            </p>
+                            <button type="button" onclick="backToStudentDashboard()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold">
+                                Kembali ke Dashboard Jadwal
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
+        }
+
+        function teardownPersistentExamWrapper() {
+            const wrapper = document.getElementById('persistent-exam-wrapper');
+            const container = document.getElementById('persistent-iframe-container');
+            if (wrapper) wrapper.classList.add('hidden');
+            if (container) container.innerHTML = '';
+            mountedExamIframeKey = '';
+        }
+
         function renderApp() {
             const root = document.getElementById('app');
             if (!root) return;
+
+            if (session.view === 'student_exam') {
+                mountPersistentExamWrapper();
+                return;
+            } else {
+                teardownPersistentExamWrapper();
+            }
+
             if (session.view === 'login') {
                 root.innerHTML = renderLoginView();
             } else if (session.view === 'student_dashboard') {
                 root.innerHTML = renderStudentDashboardView();
-            } else if (session.view === 'student_exam') {
-                root.innerHTML = renderStudentExamView();
             } else if (session.view === 'proctor') {
                 root.innerHTML = renderProctorView();
             }
@@ -2170,7 +2270,7 @@
                         ${hasEmbeddedGForm ? `
                             <div class="flex-1 w-full max-w-4xl mx-auto my-4 px-3 sm:px-0 flex flex-col">
                                 <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col min-h-[75vh]">
-                                    <iframe src="${exam.gformUrl}" class="w-full flex-1 border-0 min-h-[75vh]" allowfullscreen>Memuat Google Form...</iframe>
+                                    <iframe id="exam-gform-iframe" src="${exam.gformUrl}" class="w-full flex-1 border-0 min-h-[75vh]" allowfullscreen>Memuat Google Form...</iframe>
                                 </div>
                             </div>
                         ` : `
