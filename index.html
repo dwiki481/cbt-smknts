@@ -31,10 +31,6 @@
                             500: '#6366F1',
                             600: '#4F46E5',
                             700: '#4338CA',
-                        },
-                        gform: {
-                            purple: '#673AB7',
-                            bg: '#F0EBF8',
                         }
                     }
                 }
@@ -47,17 +43,6 @@
             color: #1E293B;
             font-family: 'Inter', sans-serif;
             overflow-x: hidden;
-        }
-        .gform-input {
-            border-bottom: 1px solid #DADCE0;
-            transition: border-color 0.2s ease;
-        }
-        .gform-input:focus {
-            outline: none;
-            border-bottom: 2px solid #673AB7;
-        }
-        .gform-radio:checked {
-            accent-color: #673AB7;
         }
         ::-webkit-scrollbar {
             width: 6px;
@@ -82,6 +67,41 @@
 
     <!-- Main App Root -->
     <div id="app" class="flex-1 flex flex-col"></div>
+
+    <!-- Modal: Input Token Ujian Siswa -->
+    <div id="token-entry-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 id="token-modal-subject" class="font-bold text-lg text-slate-900">Verifikasi Token Ujian</h3>
+                    <p id="token-modal-meta" class="text-xs text-slate-500 mt-0.5">Masukkan token yang diberikan pengawas</p>
+                </div>
+                <button onclick="closeTokenEntryModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="submitExamToken(event)" class="p-6 space-y-4">
+                <input type="hidden" id="token-modal-exam-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Token Ujian</label>
+                    <input type="text" id="token-modal-input" required autocomplete="off" placeholder="Masukkan Token (Contoh: 19281)" class="w-full px-4 py-3.5 rounded-xl border border-slate-200 text-center text-xl font-mono font-extrabold tracking-[0.25em] uppercase text-indigo-600 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10">
+                </div>
+                <div class="p-3.5 rounded-xl bg-amber-50/90 border border-amber-200/70 flex items-start gap-2.5">
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                    <p class="text-[11px] text-amber-800 leading-relaxed">
+                        Setelah token benar, ujian langsung masuk ke mode <strong>Layar Penuh (Fullscreen)</strong>. Keluar dari layar penuh atau berpindah tab akan tercatat sebagai pelanggaran.
+                    </p>
+                </div>
+                <div class="pt-2 flex items-center justify-end gap-2.5">
+                    <button type="button" onclick="closeTokenEntryModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200 transition flex items-center gap-1.5">
+                        <span>Mulai Kerjakan</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Modal: Peringatan Pelanggaran -->
     <div id="violation-modal" class="fixed inset-0 z-[90] hidden bg-white/95 backdrop-blur-sm flex items-center justify-center p-4">
@@ -120,31 +140,33 @@
             <p class="text-sm text-slate-500 leading-relaxed mb-7">
                 Anda melakukan pelanggaran melebihi batas yang diizinkan dan telah dilaporkan ke pengawas. Hubungi pengawas untuk membuka kunci. Halaman ini otomatis dilanjutkan setelah kunci dibuka.
             </p>
-            <button onclick="exitExamRoom()" class="w-full py-3 px-6 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm border border-slate-200 transition">
-                Keluar dari Ruang Ujian
+            <button onclick="backToStudentDashboard()" class="w-full py-3 px-6 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm border border-slate-200 transition">
+                Kembali ke Daftar Jadwal Ujian
             </button>
         </div>
     </div>
 
-    <!-- Modal: Tambah / Edit Jadwal & Link Google Form -->
+    <!-- Modal: Tambah / Edit Jadwal Ujian & Token Manual -->
     <div id="schedule-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 id="schedule-modal-title" class="font-bold text-lg text-slate-800">Pengaturan Jadwal & Google Form</h3>
+                <h3 id="schedule-modal-title" class="font-bold text-lg text-slate-800">Tambah Jadwal Ujian</h3>
                 <button onclick="closeScheduleModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
-            <form id="schedule-form" onsubmit="saveScheduleForm(event)" class="p-6 space-y-4">
+            <form id="schedule-form" onsubmit="saveScheduleForm(event)" class="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
                 <input type="hidden" id="edit-exam-id">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Mata Pelajaran</label>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Mata Pelajaran (MAPEL)</label>
                         <input type="text" id="input-subject" required placeholder="Contoh: Matematika" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kelas</label>
-                        <input type="text" id="input-class" required placeholder="Contoh: Kelas X-A" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Pilih Kelas</label>
+                        <select id="input-class" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 bg-white">
+                            <!-- Diisi dari daftar menu Kelas -->
+                        </select>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -157,12 +179,12 @@
                         <input type="text" id="input-session" required placeholder="Contoh: Sesi 1 • 07:30-09:30" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5">Status Ujian</label>
-                        <select id="input-status" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 bg-white">
-                            <option value="Berlangsung">Berlangsung</option>
+                        <select id="input-status" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm focus:outline-none focus:border-indigo-500 bg-white">
                             <option value="Belum Mulai">Belum Mulai</option>
+                            <option value="Berlangsung">Berlangsung</option>
                             <option value="Selesai">Selesai</option>
                         </select>
                     </div>
@@ -173,6 +195,10 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5">Maks Pelanggaran</label>
                         <input type="number" id="input-max-violations" required min="1" max="10" value="3" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Token Ujian (Manual)</label>
+                        <input type="text" id="input-token" required maxlength="8" placeholder="19281" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm font-mono font-bold uppercase text-indigo-600 focus:outline-none focus:border-indigo-500">
                     </div>
                 </div>
                 <div>
@@ -188,16 +214,17 @@
         </div>
     </div>
 
-    <!-- Modal: Tambah Peserta Ujian -->
+    <!-- Modal: Tambah / Edit Akun Siswa -->
     <div id="participant-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="font-bold text-lg text-slate-800">Tambah Peserta Ujian</h3>
+                <h3 id="participant-modal-title" class="font-bold text-lg text-slate-800">Tambah Akun Siswa</h3>
                 <button onclick="document.getElementById('participant-modal').classList.add('hidden')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
             </div>
             <form onsubmit="saveNewParticipant(event)" class="p-6 space-y-4">
+                <input type="hidden" id="p-edit-id">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nama Lengkap Siswa</label>
                     <input type="text" id="p-input-name" required placeholder="Contoh: Siti Aminah" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
@@ -208,34 +235,35 @@
                         <input type="text" id="p-input-username" required placeholder="Contoh: 0081234567" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kelas</label>
-                        <input type="text" id="p-input-class" required placeholder="Contoh: X-A" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Password Login</label>
+                        <input type="text" id="p-input-password" required value="123456" placeholder="Password siswa" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:outline-none focus:border-indigo-500">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Ruang Ujian</label>
-                        <input type="text" id="p-input-room" required value="Ruang 1" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Kelas</label>
+                        <select id="p-input-class" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 bg-white">
+                            <!-- Diisi dari menu Kelas -->
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Jadwal Ujian</label>
-                        <select id="p-input-exam" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 bg-white">
-                        </select>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Ruang Ujian</label>
+                        <input type="text" id="p-input-room" required value="Ruang 1" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                     </div>
                 </div>
                 <div class="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-100">
                     <button type="button" onclick="document.getElementById('participant-modal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition">Simpan Peserta</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition">Simpan Siswa</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal: Import Massal Peserta via Excel (.xlsx / .xls) -->
+    <!-- Modal: Import Massal Siswa via Excel (.xlsx / .xls) -->
     <div id="import-excel-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 class="font-bold text-lg text-slate-800">Import Data Peserta dari Excel</h3>
+                <h3 class="font-bold text-lg text-slate-800">Import Data Siswa dari Excel</h3>
                 <button onclick="document.getElementById('import-excel-modal').classList.add('hidden')" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
                     <i data-lucide="x" class="w-5 h-5"></i>
                 </button>
@@ -244,7 +272,7 @@
                 <div class="p-4 rounded-xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-3">
                     <div>
                         <div class="text-xs font-bold text-emerald-950">1. Unduh Template Excel (.xlsx)</div>
-                        <p class="text-[11px] text-emerald-800 mt-0.5">Buka langsung di Microsoft Excel, isi daftar siswa, lalu simpan.</p>
+                        <p class="text-[11px] text-emerald-800 mt-0.5">Berisi kolom: Nama Lengkap, Username/NISN, Password, Kelas, Ruang.</p>
                     </div>
                     <button type="button" onclick="downloadParticipantExcelTemplate()" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-2xs transition">
                         <i data-lucide="download" class="w-3.5 h-3.5"></i>
@@ -253,14 +281,9 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">2. Pilih Jadwal Ujian Tujuan</label>
-                    <select id="excel-target-exam" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 bg-white"></select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">3. Unggah File Excel (.xlsx / .xls)</label>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">2. Unggah File Excel (.xlsx / .xls)</label>
                     <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv" onchange="previewExcelFile(event)" class="w-full px-3.5 py-2.5 rounded-xl border border-dashed border-slate-300 text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
-                    <p class="text-[11px] text-slate-400 mt-1.5">Urutan kolom pada Sheet 1: <code class="text-slate-600">Nama Lengkap | Username/NISN | Kelas | Ruang</code></p>
+                    <p class="text-[11px] text-slate-400 mt-1.5">Urutan kolom pada Sheet 1: <code class="text-slate-600">Nama Lengkap | Username | Password | Kelas | Ruang</code></p>
                 </div>
 
                 <div id="excel-preview-box" class="hidden p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
@@ -316,10 +339,10 @@
         // =========================================================================
         // 1. STATE MANAGEMENT & SINKRONISASI SUPABASE REALTIME (100% CLOUD)
         // =========================================================================
-        const SESSION_KEY = 'portal_ujian_session_prod_v2';
+        const SESSION_KEY = 'portal_ujian_session_prod_v3';
 
         let session = {
-            view: 'login',
+            view: 'login', // 'login' | 'student_dashboard' | 'student' | 'proctor'
             loginTab: 'siswa',
             proctorRole: 'pengawas',
             proctorName: 'Pengawas Ruang',
@@ -331,13 +354,13 @@
         };
 
         var appState = {
-            tokenCountdown: 300,
             selectedMonitoringExamId: '',
             settings: {
                 schoolName: 'Portal Sekolah',
                 portalTitle: 'Portal Ujian Digital',
                 academicYear: '2026/2027'
             },
+            classes: [],
             staffUsers: [],
             exams: [],
             participants: []
@@ -375,11 +398,13 @@
         async function fetchAllCloudData(silent = false) {
             if (!supabaseClient) return;
             const [
+                { data: classesData, error: errClasses },
                 { data: examsData, error: errExams },
                 { data: participantsData, error: errParts },
                 { data: staffData, error: errStaff },
                 { data: settingsData, error: errSet }
             ] = await Promise.all([
+                supabaseClient.from('classes').select('*').order('name', { ascending: true }),
                 supabaseClient.from('exams').select('*').order('subject', { ascending: true }),
                 supabaseClient.from('participants').select('*').order('name', { ascending: true }),
                 supabaseClient.from('staff_users').select('*'),
@@ -399,6 +424,7 @@
                 document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
             }
 
+            appState.classes = classesData || [];
             appState.staffUsers = staffData || [];
 
             appState.exams = (examsData || []).map(row => ({
@@ -423,6 +449,7 @@
                 id: row.id,
                 name: row.name,
                 username: row.username,
+                password: row.password || '123456',
                 email: row.email || '',
                 className: row.class_name,
                 room: row.room,
@@ -450,6 +477,16 @@
             }, 8000);
         }
 
+        async function syncClassToSupabase(cls) {
+            if (!supabaseClient || !cls) return;
+            const { error } = await supabaseClient.from('classes').upsert({
+                id: cls.id,
+                name: cls.name,
+                grade_level: cls.grade_level || ''
+            });
+            if (error) showToast('Gagal menyimpan kelas ke Supabase: ' + error.message, 'danger');
+        }
+
         async function syncExamToSupabase(exam) {
             if (!supabaseClient || !exam) return;
             const { error } = await supabaseClient.from('exams').upsert({
@@ -475,10 +512,11 @@
                 id: p.id,
                 name: p.name,
                 username: p.username,
+                password: p.password || '123456',
                 email: p.email || '',
                 class_name: p.className,
                 room: p.room || 'Ruang 1',
-                exam_id: p.examId,
+                exam_id: p.examId || null,
                 status: p.status,
                 violations: p.violations || 0,
                 max_violations: p.maxViolations || 3,
@@ -489,7 +527,7 @@
                 answers: p.answers || {},
                 updated_at: new Date().toISOString()
             });
-            if (error) showToast('Gagal sinkronisasi peserta: ' + error.message, 'danger');
+            if (error) showToast('Gagal sinkronisasi siswa: ' + error.message, 'danger');
         }
 
         async function syncStaffToSupabase(staff) {
@@ -537,6 +575,16 @@
                     try {
                         supabaseClient
                             .channel('cbt-production-realtime')
+                            .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, (payload) => {
+                                if (payload.eventType === 'DELETE') {
+                                    appState.classes = appState.classes.filter(c => c.id !== payload.old.id);
+                                } else {
+                                    const idx = appState.classes.findIndex(c => c.id === payload.new.id);
+                                    if (idx >= 0) appState.classes[idx] = payload.new;
+                                    else appState.classes.push(payload.new);
+                                }
+                                renderApp();
+                            })
                             .on('postgres_changes', { event: '*', schema: 'public', table: 'exams' }, (payload) => {
                                 if (payload.eventType === 'DELETE') {
                                     appState.exams = appState.exams.filter(e => e.id !== payload.old.id);
@@ -570,6 +618,7 @@
                                         id: row.id,
                                         name: row.name,
                                         username: row.username,
+                                        password: row.password || '123456',
                                         email: row.email || '',
                                         className: row.class_name,
                                         room: row.room,
@@ -641,13 +690,6 @@
             return `${h}:${m}:${s}`;
         }
 
-        function formatTimeMS(totalSeconds) {
-            const sec = Math.max(0, Math.floor(totalSeconds));
-            const m = String(Math.floor(sec / 60)).padStart(2, '0');
-            const s = String(sec % 60).padStart(2, '0');
-            return `${m}:${s}`;
-        }
-
         function generateRandomToken() {
             return String(Math.floor(10000 + Math.random() * 90000));
         }
@@ -684,7 +726,7 @@
             if (now - lastViolationTimestamp < 1500) return;
             lastViolationTimestamp = now;
 
-            const exam = appState.exams.find(e => e.id === student.examId) || appState.exams[0];
+            const exam = appState.exams.find(e => e.id === (session.activeExamId || student.examId)) || appState.exams[0];
             const maxV = exam ? (exam.maxViolations || 3) : (student.maxViolations || 3);
 
             student.violations = (student.violations || 0) + 1;
@@ -762,31 +804,9 @@
         }
 
         // =========================================================================
-        // 5. TIMER REAL-TIME (SISA WAKTU SISWA & HITUNG MUNDUR TOKEN)
+        // 5. TIMER REAL-TIME SISA WAKTU SISWA
         // =========================================================================
         setInterval(() => {
-            let needsRender = false;
-
-            if (appState.tokenCountdown > 0) {
-                appState.tokenCountdown--;
-            } else {
-                appState.tokenCountdown = 300;
-                appState.exams.forEach(ex => {
-                    if (ex.status === 'Berlangsung') {
-                        ex.token = generateRandomToken();
-                        syncExamToSupabase(ex);
-                    }
-                });
-                if (session.view === 'proctor') {
-                    showToast('Token ujian diperbarui otomatis setiap 5 menit', 'info');
-                }
-            }
-
-            const tokenTimerEls = document.querySelectorAll('.token-countdown-text');
-            tokenTimerEls.forEach(el => {
-                el.textContent = formatTimeMS(appState.tokenCountdown);
-            });
-
             if (session.view === 'student' && session.activeStudentId) {
                 const student = appState.participants.find(p => p.id === session.activeStudentId);
                 if (student && student.status === 'Mengerjakan') {
@@ -801,16 +821,14 @@
                         }
                     } else {
                         finishStudentExam(true);
-                        needsRender = true;
+                        renderApp();
                     }
                 }
             }
-
-            if (needsRender) renderApp();
         }, 1000);
 
         // =========================================================================
-        // 6. AKSI AUTENTIKASI & NAVIGASI PRODUKSI
+        // 6. AKSI AUTENTIKASI SISWA (USERNAME + PASSWORD) & DASHBOARD SISWA
         // =========================================================================
         function switchLoginTab(tab) {
             session.loginTab = tab;
@@ -824,57 +842,117 @@
                 return;
             }
             const usernameInput = document.getElementById('login-username').value.trim().toLowerCase();
-            const tokenInput = document.getElementById('login-token').value.trim();
+            const passwordInput = document.getElementById('login-password').value.trim();
 
-            if (!usernameInput) {
-                showToast('Masukkan Username / NISN Anda terlebih dahulu', 'warning');
-                return;
-            }
-            if (!tokenInput) {
-                showToast('Masukkan Token Ujian 5 digit dari pengawas', 'warning');
+            if (!usernameInput || !passwordInput) {
+                showToast('Masukkan Username dan Password Anda terlebih dahulu', 'warning');
                 return;
             }
 
-            const matchedExam = appState.exams.find(ex => ex.token === tokenInput);
-            if (!matchedExam) {
-                showToast('Token ujian tidak valid atau sudah kedaluwarsa. Periksa kembali di layar pengawas!', 'danger');
-                return;
-            }
-            if (matchedExam.status === 'Selesai') {
-                showToast('Sesi ujian ini sudah diakhiri oleh pengawas.', 'danger');
-                return;
-            }
-            if (matchedExam.status === 'Belum Mulai') {
-                showToast('Ujian belum dimulai oleh pengawas.', 'warning');
-                return;
-            }
+            const student = appState.participants.find(
+                p => p.username.toLowerCase() === usernameInput && p.password === passwordInput
+            );
 
-            const student = appState.participants.find(p => p.username.toLowerCase() === usernameInput);
             if (!student) {
-                showToast('Username / NISN tidak terdaftar pada database peserta ujian!', 'danger');
+                showToast('Username atau Password siswa tidak sesuai!', 'danger');
                 return;
             }
 
-            if (student.status === 'Selesai') {
-                showToast('Anda sudah menyelesaikan ujian ini sebelumnya.', 'info');
+            session.view = 'student_dashboard';
+            session.activeStudentId = student.id;
+            saveState();
+            showToast(`Selamat datang, ${student.name}!`, 'success');
+            renderApp();
+        }
+
+        function openTokenEntryModal(examId) {
+            const exam = appState.exams.find(e => e.id === examId);
+            const student = appState.participants.find(p => p.id === session.activeStudentId);
+            if (!exam || !student) return;
+
+            if (exam.status !== 'Berlangsung') {
+                showToast('Ujian ini belum dibuka atau sudah berakhir.', 'warning');
                 return;
             }
 
-            student.examId = matchedExam.id;
-            if (student.status === 'Belum Masuk' || student.status === 'Offline') {
+            if (student.examId === exam.id && student.status === 'Selesai') {
+                showToast('Anda sudah menyelesaikan ujian mata pelajaran ini.', 'info');
+                return;
+            }
+
+            if (student.examId === exam.id && student.status === 'Terkunci') {
+                session.view = 'student';
+                session.activeExamId = exam.id;
+                saveState();
+                checkStudentLockState();
+                renderApp();
+                return;
+            }
+
+            document.getElementById('token-modal-exam-id').value = exam.id;
+            document.getElementById('token-modal-subject').textContent = exam.subject;
+            document.getElementById('token-modal-meta').textContent = `${exam.className} • ${exam.sessionStr}`;
+            document.getElementById('token-modal-input').value = '';
+            document.getElementById('token-entry-modal').classList.remove('hidden');
+            setTimeout(() => document.getElementById('token-modal-input').focus(), 100);
+            lucide.createIcons();
+        }
+
+        function closeTokenEntryModal() {
+            document.getElementById('token-entry-modal').classList.add('hidden');
+        }
+
+        function submitExamToken(e) {
+            e.preventDefault();
+            const examId = document.getElementById('token-modal-exam-id').value;
+            const tokenInput = document.getElementById('token-modal-input').value.trim().toUpperCase();
+            const exam = appState.exams.find(ex => ex.id === examId);
+            const student = appState.participants.find(p => p.id === session.activeStudentId);
+
+            if (!exam || !student) return;
+
+            if (exam.token.toUpperCase() !== tokenInput) {
+                showToast('Token ujian salah! Silakan cek kembali token dari pengawas/admin.', 'danger');
+                return;
+            }
+
+            if (exam.status !== 'Berlangsung') {
+                showToast('Status ujian saat ini tidak aktif.', 'warning');
+                return;
+            }
+
+            // Jika siswa berpindah ke mapel baru, reset timer & status mengerjakan
+            if (student.examId !== exam.id || student.status === 'Belum Masuk' || student.status === 'Offline') {
+                student.examId = exam.id;
                 student.status = 'Mengerjakan';
-                student.remainingSeconds = matchedExam.durationSeconds || 5400;
+                student.violations = 0;
+                student.maxViolations = exam.maxViolations || 3;
+                student.lastViolationReason = '';
+                student.violationLogs = [];
+                student.remainingSeconds = exam.durationSeconds || 5400;
             }
             student.lastActive = 'Baru saja';
 
             session.view = 'student';
-            session.activeStudentId = student.id;
-            session.activeExamId = matchedExam.id;
+            session.activeExamId = exam.id;
 
+            closeTokenEntryModal();
             syncParticipantToSupabase(student);
             saveState();
             requestExamFullscreen();
             checkStudentLockState();
+            renderApp();
+        }
+
+        function backToStudentDashboard() {
+            if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+            document.getElementById('locked-screen').classList.add('hidden');
+            document.getElementById('violation-modal').classList.add('hidden');
+            session.view = 'student_dashboard';
+            session.violationModalOpen = false;
+            saveState();
             renderApp();
         }
 
@@ -899,7 +977,7 @@
             session.view = 'proctor';
             session.proctorRole = matchedStaff.role === 'admin' ? 'admin' : 'pengawas';
             session.proctorName = matchedStaff.name;
-            session.proctorTab = matchedStaff.role === 'admin' ? 'monitoring' : 'jadwal';
+            session.proctorTab = matchedStaff.role === 'admin' ? 'jadwal' : 'jadwal';
             saveState();
             renderApp();
         }
@@ -910,15 +988,12 @@
             }
             session.view = 'login';
             session.activeStudentId = null;
+            session.activeExamId = null;
             session.violationModalOpen = false;
             document.getElementById('violation-modal').classList.add('hidden');
             document.getElementById('locked-screen').classList.add('hidden');
             saveState();
             renderApp();
-        }
-
-        function exitExamRoom() {
-            logoutPortal();
         }
 
         // =========================================================================
@@ -931,21 +1006,19 @@
             student.status = 'Selesai';
             student.lastActive = 'Baru saja';
             syncParticipantToSupabase(student);
-            saveState();
 
             if (document.fullscreenElement && document.exitFullscreen) {
                 document.exitFullscreen().catch(() => {});
             }
 
-            showToast(autoSubmit ? 'Waktu habis! Jawaban otomatis dikirim.' : 'Ujian telah selesai dan jawaban berhasil dikirim!', 'success');
-            session.view = 'login';
-            session.activeStudentId = null;
+            showToast(autoSubmit ? 'Waktu habis! Jawaban otomatis dikirim.' : 'Ujian selesai! Anda kembali ke Dashboard Jadwal Ujian.', 'success');
+            session.view = 'student_dashboard';
             saveState();
             renderApp();
         }
 
         // =========================================================================
-        // 8. AKSI PENGAWAS & ADMINISTRATOR
+        // 8. AKSI PENGAWAS & ADMINISTRATOR (KELAS, SISWA, JADWAL, TOKEN MANUAL)
         // =========================================================================
         function setProctorTab(tab) {
             session.proctorTab = tab;
@@ -953,11 +1026,43 @@
             renderApp();
         }
 
+        function saveNewClass(e) {
+            e.preventDefault();
+            const name = document.getElementById('class-input-name').value.trim();
+            const grade = document.getElementById('class-input-grade').value.trim();
+
+            if (!name) return;
+            if (appState.classes.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+                showToast('Nama kelas tersebut sudah ada!', 'warning');
+                return;
+            }
+
+            const newClass = {
+                id: 'kelas-' + Date.now(),
+                name: name,
+                grade_level: grade
+            };
+            appState.classes.push(newClass);
+            syncClassToSupabase(newClass);
+            showToast(`Kelas "${name}" berhasil ditambahkan!`, 'success');
+            renderApp();
+        }
+
+        async function deleteClassItem(classId) {
+            const cls = appState.classes.find(c => c.id === classId);
+            if (!cls) return;
+            appState.classes = appState.classes.filter(c => c.id !== classId);
+            if (supabaseClient) {
+                await supabaseClient.from('classes').delete().eq('id', classId);
+            }
+            showToast(`Kelas "${cls.name}" dihapus`, 'info');
+            renderApp();
+        }
+
         function rotateExamToken(examId) {
             const exam = appState.exams.find(e => e.id === examId);
             if (!exam) return;
             exam.token = generateRandomToken();
-            appState.tokenCountdown = 300;
             syncExamToSupabase(exam);
             showToast(`Token baru untuk ${exam.subject}: ${exam.token}`, 'success');
             renderApp();
@@ -1005,7 +1110,7 @@
             if (!exam) return;
             exam.status = 'Berlangsung';
             syncExamToSupabase(exam);
-            showToast(`Ujian ${exam.subject} kini berstatus Berlangsung`, 'success');
+            showToast(`Ujian ${exam.subject} dibuka (Berlangsung)`, 'success');
             renderApp();
         }
 
@@ -1028,10 +1133,10 @@
         function allowReentryParticipant(participantId) {
             const p = appState.participants.find(item => item.id === participantId);
             if (!p) return;
-            p.status = 'Mengerjakan';
+            p.status = 'Belum Masuk';
             p.violations = 0;
             p.lastViolationReason = '';
-            p.lastActive = 'Baru saja (Masuk Ulang)';
+            p.lastActive = 'Baru saja (Reset Ujian)';
             syncParticipantToSupabase(p);
             showToast(`${p.name} diizinkan masuk ulang (pelanggaran di-reset 0/${p.maxViolations})`, 'info');
             renderApp();
@@ -1045,7 +1150,7 @@
             if (supabaseClient) {
                 await supabaseClient.from('participants').delete().eq('id', participantId);
             }
-            showToast(`Peserta ${name} dihapus dari daftar ujian`, 'warning');
+            showToast(`Akun siswa ${name} dihapus`, 'warning');
             renderApp();
         }
 
@@ -1059,7 +1164,7 @@
                 body.innerHTML = `
                     <div class="mb-3 pb-2 border-b border-slate-100">
                         <div class="font-bold text-slate-800">${p.name}</div>
-                        <div class="text-xs text-slate-500">${p.username} • ${p.room}</div>
+                        <div class="text-xs text-slate-500">${p.username} • ${p.className} • ${p.room}</div>
                     </div>
                     ${p.violationLogs.map(log => `
                         <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-start justify-between gap-3">
@@ -1076,72 +1181,111 @@
             lucide.createIcons();
         }
 
-        function openAddParticipantModal() {
-            const examSelect = document.getElementById('p-input-exam');
-            if (appState.exams.length === 0) {
-                showToast('Buat jadwal ujian terlebih dahulu sebelum menambah peserta!', 'warning');
+        function getClassOptionsHtml(selectedValue = '') {
+            const classNames = appState.classes.map(c => c.name);
+            if (selectedValue && !classNames.includes(selectedValue)) {
+                classNames.unshift(selectedValue);
+            }
+            if (classNames.length === 0) {
+                return `<option value="">-- Tambahkan Kelas Terlebih Dahulu di Menu Kelas --</option>`;
+            }
+            return classNames.map(cName => `<option value="${cName}" ${cName === selectedValue ? 'selected' : ''}>${cName}</option>`).join('');
+        }
+
+        function openAddParticipantModal(participantId = null) {
+            if (appState.classes.length === 0 && !participantId) {
+                showToast('Tambahkan data Kelas terlebih dahulu di menu Kelas!', 'warning');
+                setProctorTab('kelas');
                 return;
             }
-            examSelect.innerHTML = appState.exams.map(ex => `<option value="${ex.id}" ${ex.id === appState.selectedMonitoringExamId ? 'selected' : ''}>${ex.subject} (${ex.className})</option>`).join('');
-            document.getElementById('p-input-name').value = '';
-            document.getElementById('p-input-username').value = '';
-            document.getElementById('p-input-class').value = '';
+            const classSelect = document.getElementById('p-input-class');
+            if (participantId) {
+                const p = appState.participants.find(item => item.id === participantId);
+                if (!p) return;
+                document.getElementById('participant-modal-title').textContent = `Edit Akun Siswa — ${p.name}`;
+                document.getElementById('p-edit-id').value = p.id;
+                document.getElementById('p-input-name').value = p.name;
+                document.getElementById('p-input-username').value = p.username;
+                document.getElementById('p-input-password').value = p.password || '123456';
+                classSelect.innerHTML = getClassOptionsHtml(p.className);
+                document.getElementById('p-input-room').value = p.room || 'Ruang 1';
+            } else {
+                document.getElementById('participant-modal-title').textContent = 'Tambah Akun Siswa Baru';
+                document.getElementById('p-edit-id').value = '';
+                document.getElementById('p-input-name').value = '';
+                document.getElementById('p-input-username').value = '';
+                document.getElementById('p-input-password').value = '123456';
+                classSelect.innerHTML = getClassOptionsHtml();
+                document.getElementById('p-input-room').value = 'Ruang 1';
+            }
             document.getElementById('participant-modal').classList.remove('hidden');
             lucide.createIcons();
         }
 
         function saveNewParticipant(e) {
             e.preventDefault();
+            const editId = document.getElementById('p-edit-id').value;
             const name = document.getElementById('p-input-name').value.trim();
             const username = document.getElementById('p-input-username').value.trim();
-            const className = document.getElementById('p-input-class').value.trim();
+            const password = document.getElementById('p-input-password').value.trim() || '123456';
+            const className = document.getElementById('p-input-class').value;
             const room = document.getElementById('p-input-room').value.trim();
-            const examId = document.getElementById('p-input-exam').value;
 
-            if (appState.participants.some(p => p.username.toLowerCase() === username.toLowerCase())) {
-                showToast('Username / NISN tersebut sudah terdaftar!', 'danger');
+            if (!className) {
+                showToast('Pilih kelas terlebih dahulu!', 'warning');
                 return;
             }
 
-            const exam = appState.exams.find(ex => ex.id === examId);
-            const newParticipant = {
-                id: 'siswa-' + Date.now(),
-                name,
-                username,
-                email: `${username}@sekolah.sch.id`,
-                className,
-                room,
-                examId,
-                status: 'Belum Masuk',
-                violations: 0,
-                maxViolations: exam ? exam.maxViolations : 3,
-                lastViolationReason: '',
-                violationLogs: [],
-                lastActive: '-',
-                remainingSeconds: exam ? exam.durationSeconds : 5400,
-                answers: {}
-            };
+            if (editId) {
+                const existing = appState.participants.find(p => p.id === editId);
+                if (existing) {
+                    existing.name = name;
+                    existing.username = username;
+                    existing.password = password;
+                    existing.className = className;
+                    existing.room = room;
+                    syncParticipantToSupabase(existing);
+                    showToast(`Data siswa ${name} diperbarui!`, 'success');
+                }
+            } else {
+                if (appState.participants.some(p => p.username.toLowerCase() === username.toLowerCase())) {
+                    showToast('Username / NISN tersebut sudah terdaftar!', 'danger');
+                    return;
+                }
+                const matchingExam = appState.exams.find(ex => ex.className === className);
+                const newParticipant = {
+                    id: 'siswa-' + Date.now(),
+                    name,
+                    username,
+                    password,
+                    email: `${username}@sekolah.sch.id`,
+                    className,
+                    room,
+                    examId: matchingExam ? matchingExam.id : null,
+                    status: 'Belum Masuk',
+                    violations: 0,
+                    maxViolations: matchingExam ? matchingExam.maxViolations : 3,
+                    lastViolationReason: '',
+                    violationLogs: [],
+                    lastActive: '-',
+                    remainingSeconds: matchingExam ? matchingExam.durationSeconds : 5400,
+                    answers: {}
+                };
+                appState.participants.push(newParticipant);
+                syncParticipantToSupabase(newParticipant);
+                showToast(`Akun siswa ${name} berhasil ditambahkan!`, 'success');
+            }
 
-            appState.participants.push(newParticipant);
-            appState.selectedMonitoringExamId = examId;
-            syncParticipantToSupabase(newParticipant);
             document.getElementById('participant-modal').classList.add('hidden');
-            showToast(`Peserta ${name} berhasil ditambahkan!`, 'success');
             renderApp();
         }
 
         // =========================================================================
-        // IMPORT & EXPORT EXCEL (.XLSX / .XLS) PESERTA UJIAN
+        // IMPORT & EXPORT EXCEL (.XLSX / .XLS) AKUN SISWA
         // =========================================================================
         let parsedExcelParticipants = [];
 
         function openImportExcelModal() {
-            if (appState.exams.length === 0) {
-                showToast('Buat jadwal ujian terlebih dahulu sebelum import peserta!', 'warning');
-                return;
-            }
-            const examSelect = document.getElementById('excel-target-exam');
-            examSelect.innerHTML = appState.exams.map(ex => `<option value="${ex.id}" ${ex.id === appState.selectedMonitoringExamId ? 'selected' : ''}>${ex.subject} (${ex.className})</option>`).join('');
             document.getElementById('excel-file-input').value = '';
             document.getElementById('excel-preview-box').classList.add('hidden');
             document.getElementById('btn-process-excel').disabled = true;
@@ -1155,22 +1299,24 @@
                 showToast('Library Excel sedang dimuat, coba beberapa detik lagi.', 'warning');
                 return;
             }
+            const defaultClass = appState.classes.length > 0 ? appState.classes[0].name : 'Kelas X-A';
             const rows = [
-                ['Nama Lengkap', 'Username/NISN', 'Kelas', 'Ruang'],
-                ['Ahmad Fauzi', '0081001', 'X-A', 'Ruang 1'],
-                ['Dewi Lestari', '0081002', 'X-A', 'Ruang 1'],
-                ['Rizky Pratama', '0081003', 'X-A', 'Ruang 1']
+                ['Nama Lengkap', 'Username', 'Password', 'Kelas', 'Ruang'],
+                ['Ahmad Fauzi', '0081001', '123456', defaultClass, 'Ruang 1'],
+                ['Dewi Lestari', '0081002', '123456', defaultClass, 'Ruang 1'],
+                ['Rizky Pratama', '0081003', '123456', defaultClass, 'Ruang 1']
             ];
             const worksheet = XLSX.utils.aoa_to_sheet(rows);
             worksheet['!cols'] = [
                 { wch: 28 },
                 { wch: 18 },
-                { wch: 14 },
+                { wch: 16 },
+                { wch: 18 },
                 { wch: 16 }
             ];
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, 'Peserta CBT');
-            XLSX.writeFile(workbook, 'template_peserta_cbt.xlsx');
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Data Siswa CBT');
+            XLSX.writeFile(workbook, 'template_siswa_cbt.xlsx');
             showToast('Template Excel (.xlsx) berhasil diunduh!', 'success');
         }
 
@@ -1197,17 +1343,18 @@
                         const col1 = String(cols[1] || '').trim();
                         const col2 = String(cols[2] || '').trim();
                         const col3 = String(cols[3] || '').trim();
+                        const col4 = String(cols[4] || '').trim();
 
-                        // Lewati baris header
-                        if (idx === 0 && (col0.toLowerCase().includes('nama') || col1.toLowerCase().includes('nisn') || col1.toLowerCase().includes('username'))) {
+                        if (idx === 0 && (col0.toLowerCase().includes('nama') || col1.toLowerCase().includes('username') || col1.toLowerCase().includes('nisn'))) {
                             return;
                         }
                         if (col0 && col1) {
                             parsedExcelParticipants.push({
                                 name: col0,
                                 username: col1,
-                                className: col2 || 'Umum',
-                                room: col3 || 'Ruang 1'
+                                password: col2 || '123456',
+                                className: col3 || (appState.classes[0]?.name || 'Kelas X-A'),
+                                room: col4 || 'Ruang 1'
                             });
                         }
                     });
@@ -1223,9 +1370,9 @@
                         sampleEl.innerHTML = '';
                         btnProcess.disabled = true;
                     } else {
-                        summaryEl.textContent = `Siap mengimpor ${parsedExcelParticipants.length} peserta dari sheet "${firstSheetName}":`;
-                        sampleEl.innerHTML = parsedExcelParticipants.slice(0, 8).map((p, i) => `<div>${i + 1}. <strong>${p.name}</strong> (${p.username}) — ${p.className} • ${p.room}</div>`).join('') +
-                            (parsedExcelParticipants.length > 8 ? `<div class="italic text-slate-400">...dan ${parsedExcelParticipants.length - 8} peserta lainnya</div>` : '');
+                        summaryEl.textContent = `Siap mengimpor ${parsedExcelParticipants.length} siswa dari sheet "${firstSheetName}":`;
+                        sampleEl.innerHTML = parsedExcelParticipants.slice(0, 8).map((p, i) => `<div>${i + 1}. <strong>${p.name}</strong> (User: ${p.username} | Pass: ${p.password}) — ${p.className} • ${p.room}</div>`).join('') +
+                            (parsedExcelParticipants.length > 8 ? `<div class="italic text-slate-400">...dan ${parsedExcelParticipants.length - 8} siswa lainnya</div>` : '');
                         btnProcess.disabled = false;
                     }
                 } catch (err) {
@@ -1237,30 +1384,40 @@
 
         async function processExcelImport() {
             if (parsedExcelParticipants.length === 0) return;
-            const examId = document.getElementById('excel-target-exam').value;
-            const exam = appState.exams.find(ex => ex.id === examId);
             const btnProcess = document.getElementById('btn-process-excel');
             btnProcess.disabled = true;
             btnProcess.textContent = 'Mengimpor...';
 
+            // Otomatis daftarkan kelas baru jika belum ada di tabel classes
+            const uniqueNewClasses = [...new Set(parsedExcelParticipants.map(item => item.className))];
+            for (const cName of uniqueNewClasses) {
+                if (!appState.classes.some(c => c.name.toLowerCase() === cName.toLowerCase())) {
+                    const newCls = { id: 'kelas-' + Date.now() + '-' + Math.floor(Math.random() * 1000), name: cName, grade_level: '' };
+                    appState.classes.push(newCls);
+                    await syncClassToSupabase(newCls);
+                }
+            }
+
             const rowsToUpsert = [];
             parsedExcelParticipants.forEach((item, idx) => {
                 const existing = appState.participants.find(p => p.username.toLowerCase() === item.username.toLowerCase());
+                const matchingExam = appState.exams.find(ex => ex.className === item.className);
                 const participantObj = {
                     id: existing ? existing.id : `siswa-${Date.now()}-${idx}`,
                     name: item.name,
                     username: item.username,
+                    password: item.password,
                     email: `${item.username}@sekolah.sch.id`,
                     className: item.className,
                     room: item.room,
-                    examId: examId,
+                    examId: existing ? existing.examId : (matchingExam ? matchingExam.id : null),
                     status: existing ? existing.status : 'Belum Masuk',
                     violations: existing ? existing.violations : 0,
-                    maxViolations: exam ? (exam.maxViolations || 3) : 3,
+                    maxViolations: matchingExam ? (matchingExam.maxViolations || 3) : 3,
                     lastViolationReason: existing ? existing.lastViolationReason : '',
                     violationLogs: existing ? existing.violationLogs : [],
                     lastActive: existing ? existing.lastActive : '-',
-                    remainingSeconds: exam ? exam.durationSeconds : 5400,
+                    remainingSeconds: matchingExam ? matchingExam.durationSeconds : 5400,
                     answers: existing ? existing.answers : {}
                 };
 
@@ -1274,6 +1431,7 @@
                     id: participantObj.id,
                     name: participantObj.name,
                     username: participantObj.username,
+                    password: participantObj.password,
                     email: participantObj.email,
                     class_name: participantObj.className,
                     room: participantObj.room,
@@ -1300,10 +1458,9 @@
                 }
             }
 
-            appState.selectedMonitoringExamId = examId;
             document.getElementById('import-excel-modal').classList.add('hidden');
             btnProcess.textContent = 'Import ke Supabase';
-            showToast(`Berhasil mengimpor ${rowsToUpsert.length} peserta dari Excel ke database!`, 'success');
+            showToast(`Berhasil mengimpor ${rowsToUpsert.length} akun siswa dari Excel!`, 'success');
             renderApp();
         }
 
@@ -1357,24 +1514,34 @@
         }
 
         function openScheduleModal(examId = null) {
+            if (appState.classes.length === 0 && !examId) {
+                showToast('Tambahkan daftar Kelas terlebih dahulu di menu Kelas sebelum membuat Jadwal Ujian!', 'warning');
+                setProctorTab('kelas');
+                return;
+            }
             const modal = document.getElementById('schedule-modal');
+            const classSelect = document.getElementById('input-class');
+
             if (examId) {
                 const ex = appState.exams.find(e => e.id === examId);
-                document.getElementById('schedule-modal-title').textContent = `Edit Jadwal & Google Form — ${ex.subject}`;
+                document.getElementById('schedule-modal-title').textContent = `Edit Jadwal Ujian — ${ex.subject}`;
                 document.getElementById('edit-exam-id').value = ex.id;
                 document.getElementById('input-subject').value = ex.subject;
-                document.getElementById('input-class').value = ex.className;
+                classSelect.innerHTML = getClassOptionsHtml(ex.className);
                 document.getElementById('input-date').value = ex.dateStr;
                 document.getElementById('input-session').value = ex.sessionStr;
                 document.getElementById('input-status').value = ex.status;
                 document.getElementById('input-duration').value = Math.round(ex.durationSeconds / 60);
                 document.getElementById('input-max-violations').value = ex.maxViolations || 3;
+                document.getElementById('input-token').value = ex.token || generateRandomToken();
                 document.getElementById('input-gform-url').value = ex.gformUrl || '';
             } else {
                 document.getElementById('schedule-modal-title').textContent = 'Tambah Jadwal Ujian Baru';
                 document.getElementById('edit-exam-id').value = '';
                 document.getElementById('schedule-form').reset();
+                classSelect.innerHTML = getClassOptionsHtml();
                 document.getElementById('input-max-violations').value = 3;
+                document.getElementById('input-token').value = generateRandomToken();
             }
             modal.classList.remove('hidden');
             lucide.createIcons();
@@ -1388,13 +1555,19 @@
             e.preventDefault();
             const id = document.getElementById('edit-exam-id').value;
             const subject = document.getElementById('input-subject').value.trim();
-            const className = document.getElementById('input-class').value.trim();
+            const className = document.getElementById('input-class').value;
             const dateStr = document.getElementById('input-date').value.trim();
             const sessionStr = document.getElementById('input-session').value.trim();
             const status = document.getElementById('input-status').value;
             const durationMins = parseInt(document.getElementById('input-duration').value, 10) || 90;
             const maxViolations = parseInt(document.getElementById('input-max-violations').value, 10) || 3;
+            const token = document.getElementById('input-token').value.trim().toUpperCase() || generateRandomToken();
             const gformUrl = document.getElementById('input-gform-url').value.trim();
+
+            if (!className) {
+                showToast('Pilih kelas untuk jadwal ujian ini!', 'warning');
+                return;
+            }
 
             if (id) {
                 const ex = appState.exams.find(item => item.id === id);
@@ -1406,9 +1579,10 @@
                     ex.status = status;
                     ex.durationSeconds = durationMins * 60;
                     ex.maxViolations = maxViolations;
+                    ex.token = token;
                     ex.gformUrl = gformUrl;
                     syncExamToSupabase(ex);
-                    showToast(`Jadwal ${subject} berhasil diperbarui!`, 'success');
+                    showToast(`Jadwal ${subject} (${className}) berhasil diperbarui!`, 'success');
                 }
             } else {
                 const newExam = {
@@ -1418,7 +1592,7 @@
                     dateStr,
                     sessionStr,
                     status,
-                    token: generateRandomToken(),
+                    token,
                     durationSeconds: durationMins * 60,
                     maxViolations,
                     gformUrl,
@@ -1427,7 +1601,7 @@
                 appState.exams.unshift(newExam);
                 appState.selectedMonitoringExamId = newExam.id;
                 syncExamToSupabase(newExam);
-                showToast(`Jadwal ujian ${subject} berhasil dibuat!`, 'success');
+                showToast(`Jadwal ujian ${subject} (${className}) berhasil dibuat!`, 'success');
             }
 
             closeScheduleModal();
@@ -1435,7 +1609,7 @@
         }
 
         // =========================================================================
-        // 9. RENDER VIEWS (LOGIN, UJIAN SISWA, DASHBOARD PENGAWAS/ADMIN)
+        // 9. RENDER VIEWS (LOGIN, DASHBOARD SISWA, RUANG UJIAN, ADMIN/PENGAWAS)
         // =========================================================================
         function renderLoginView() {
             const isSiswa = session.loginTab === 'siswa';
@@ -1463,31 +1637,23 @@
                             ${isSiswa ? `
                                 <form onsubmit="handleStudentLogin(event)" class="p-6 sm:p-8 space-y-5">
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Username / NISN Peserta</label>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Username / NISN Siswa</label>
                                         <div class="relative">
-                                            <i data-lucide="id-card" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                                            <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
                                             <input type="text" id="login-username" required autocomplete="off" placeholder="Masukkan Username atau NISN" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm font-medium focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10">
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Token Ujian (5 Digit)</label>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Password Siswa</label>
                                         <div class="relative">
-                                            <i data-lucide="key-round" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
-                                            <input type="text" id="login-token" required maxlength="5" autocomplete="off" placeholder="Contoh: 19281" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-base font-mono font-bold tracking-[0.25em] text-indigo-600 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10">
+                                            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                                            <input type="password" id="login-password" required placeholder="••••••••" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10">
                                         </div>
-                                        <p class="text-[11px] text-slate-400 mt-1.5">Minta token 5 digit yang sedang berlangsung kepada pengawas ruang.</p>
-                                    </div>
-
-                                    <div class="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/70 flex items-start gap-2.5">
-                                        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
-                                        <p class="text-[11px] text-amber-800 leading-relaxed">
-                                            Sistem ujian menggunakan mode <strong>Layar Penuh (Fullscreen)</strong>. Keluar dari layar penuh atau berpindah tab akan tercatat sebagai pelanggaran otomatis.
-                                        </p>
                                     </div>
 
                                     <button type="submit" class="w-full py-3.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-md shadow-indigo-200 transition flex items-center justify-center gap-2">
-                                        <span>Mulai Ujian Sekarang</span>
+                                        <span>Masuk Dashboard Ujian</span>
                                         <i data-lucide="arrow-right" class="w-4 h-4"></i>
                                     </button>
                                 </form>
@@ -1529,22 +1695,147 @@
             `;
         }
 
+        function renderStudentDashboardView() {
+            const student = appState.participants.find(p => p.id === session.activeStudentId);
+            if (!student) {
+                session.view = 'login';
+                return renderLoginView();
+            }
+
+            // Tampilkan jadwal ujian yang sesuai dengan kelas siswa
+            const classExams = appState.exams.filter(
+                ex => ex.className.toLowerCase().trim() === student.className.toLowerCase().trim()
+            );
+
+            return `
+                <div class="min-h-screen flex flex-col bg-[#F4F6FA]">
+                    <header class="bg-white border-b border-slate-200/80 px-4 sm:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm">
+                                <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <div class="font-bold text-sm sm:text-base text-slate-900">${appState.settings.portalTitle}</div>
+                                <div class="text-xs text-slate-500">${appState.settings.schoolName} • ${appState.settings.academicYear}</div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-3 sm:gap-4">
+                            <div class="text-right hidden sm:block">
+                                <div class="font-bold text-sm text-slate-900">${student.name}</div>
+                                <div class="text-xs text-slate-500">${student.username} • ${student.className} • ${student.room}</div>
+                            </div>
+                            <button onclick="logoutPortal()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 text-xs font-bold transition">
+                                <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                                <span>Keluar</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    <main class="flex-1 w-full max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-6">
+                        <!-- Kartu Profil Siswa Mobile/Desktop -->
+                        <div class="bg-white rounded-2xl border border-slate-200/70 p-5 sm:p-6 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <span class="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-bold uppercase tracking-wider">Kartu Peserta Ujian</span>
+                                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-2">${student.name}</h1>
+                                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">
+                                    Username/NISN: <strong class="text-slate-700">${student.username}</strong> • Kelas: <strong class="text-slate-700">${student.className}</strong> • Ruang: <strong class="text-slate-700">${student.room}</strong>
+                                </p>
+                            </div>
+                            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600">
+                                <div class="font-bold text-slate-800 mb-0.5">Petunjuk Ujian:</div>
+                                <div>Pilih jadwal yang berstatus <strong class="text-emerald-600">Berlangsung</strong>, lalu masukkan <strong>Token Ujian</strong> dari pengawas.</div>
+                            </div>
+                        </div>
+
+                        <!-- Daftar Jadwal Ujian Kelas Siswa -->
+                        <div>
+                            <h2 class="text-lg font-extrabold text-slate-900 mb-3">Jadwal Ujian — ${student.className}</h2>
+
+                            ${classExams.length === 0 ? `
+                                <div class="bg-white rounded-2xl border border-slate-200/70 p-10 text-center">
+                                    <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                                        <i data-lucide="calendar-off" class="w-6 h-6"></i>
+                                    </div>
+                                    <p class="text-sm font-bold text-slate-700">Belum Ada Jadwal Ujian untuk ${student.className}</p>
+                                    <p class="text-xs text-slate-400 mt-1">Silakan hubungi panitia atau pengawas ujian apabila jadwal belum tampil.</p>
+                                </div>
+                            ` : `
+                                <div class="grid grid-cols-1 gap-4">
+                                    ${classExams.map(ex => {
+                                        const isOpen = ex.status === 'Berlangsung';
+                                        const isCompletedByStudent = student.examId === ex.id && student.status === 'Selesai';
+                                        const isLockedForStudent = student.examId === ex.id && student.status === 'Terkunci';
+                                        const isInProgress = student.examId === ex.id && student.status === 'Mengerjakan';
+                                        const durationMins = Math.round((ex.durationSeconds || 5400) / 60);
+
+                                        const statusBadge = isOpen
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : ex.status === 'Belum Mulai'
+                                                ? 'bg-amber-100 text-amber-700'
+                                                : 'bg-slate-200 text-slate-600';
+
+                                        return `
+                                            <div class="bg-white rounded-2xl border border-slate-200/70 p-5 sm:p-6 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div class="space-y-1.5">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${statusBadge}">${ex.status}</span>
+                                                        <span class="text-xs font-semibold text-slate-400">• Durasi ${durationMins} Menit • Maks ${ex.maxViolations} Pelanggaran</span>
+                                                    </div>
+                                                    <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">${ex.subject}</h3>
+                                                    <div class="text-xs sm:text-sm text-slate-500 flex flex-wrap items-center gap-3">
+                                                        <span class="inline-flex items-center gap-1"><i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i> ${ex.dateStr}</span>
+                                                        <span class="inline-flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i> ${ex.sessionStr}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div class="shrink-0">
+                                                    ${isCompletedByStudent ? `
+                                                        <span class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold">
+                                                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i> Sudah Selesai
+                                                        </span>
+                                                    ` : isLockedForStudent ? `
+                                                        <button onclick="openTokenEntryModal('${ex.id}')" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-sm transition">
+                                                            <i data-lucide="lock" class="w-4 h-4"></i> Ujian Terkunci (Cek Status)
+                                                        </button>
+                                                    ` : isOpen ? `
+                                                        <button onclick="openTokenEntryModal('${ex.id}')" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-indigo-200 transition">
+                                                            <i data-lucide="key-round" class="w-4 h-4"></i>
+                                                            <span>${isInProgress ? 'Lanjutkan Ujian' : 'Kerjakan Ujian'}</span>
+                                                        </button>
+                                                    ` : `
+                                                        <button disabled class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-100 text-slate-400 text-xs font-bold cursor-not-allowed">
+                                                            <i data-lucide="clock" class="w-4 h-4"></i>
+                                                            <span>${ex.status === 'Belum Mulai' ? 'Belum Dibuka' : 'Ujian Ditutup'}</span>
+                                                        </button>
+                                                    `}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            `}
+                        </div>
+                    </main>
+                </div>
+            `;
+        }
+
         function renderStudentExamView() {
             const student = appState.participants.find(p => p.id === session.activeStudentId);
             if (!student) {
                 session.view = 'login';
                 return renderLoginView();
             }
-            const exam = appState.exams.find(e => e.id === student.examId) || appState.exams[0];
+            const exam = appState.exams.find(e => e.id === (session.activeExamId || student.examId)) || appState.exams[0];
             if (!exam) {
-                session.view = 'login';
-                return renderLoginView();
+                session.view = 'student_dashboard';
+                return renderStudentDashboardView();
             }
             const maxV = exam.maxViolations || student.maxViolations || 3;
 
             return `
                 <div class="min-h-screen flex flex-col bg-[#F0EBF8]">
-                    <!-- Sticky Top Exam Header -->
                     <header class="sticky top-0 z-40 bg-white border-b border-slate-200/80 px-4 sm:px-6 py-2.5 flex items-center justify-between shadow-2xs">
                         <div>
                             <div class="font-bold text-sm sm:text-base text-slate-900 leading-tight">${exam.subject}</div>
@@ -1572,7 +1863,6 @@
                         </div>
                     </header>
 
-                    <!-- Main Google Form Container -->
                     <main class="flex-1 w-full max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-6">
                         ${exam.gformUrl ? `
                             <div class="bg-white rounded-xl shadow-xs border border-slate-200/80 overflow-hidden">
@@ -1604,16 +1894,15 @@
             const menuItems = isAdmin ? [
                 { id: 'dashboard', label: 'Dashboard', icon: 'layout-grid' },
                 { id: 'kelas', label: 'Kelas', icon: 'school' },
-                { id: 'pengguna', label: 'Pengguna Staf', icon: 'users' },
-                { id: 'sesi', label: 'Sesi', icon: 'clock' },
-                { id: 'ruang', label: 'Ruang', icon: 'door-open' },
+                { id: 'siswa', label: 'Data Siswa', icon: 'graduation-cap' },
                 { id: 'jadwal', label: 'Jadwal Ujian', icon: 'calendar' },
                 { id: 'monitoring', label: 'Monitoring', icon: 'activity' },
+                { id: 'pengguna', label: 'Pengguna Staf', icon: 'users' },
                 { id: 'pengaturan', label: 'Pengaturan', icon: 'settings' },
             ] : [
                 { id: 'jadwal', label: 'Jadwal & Token', icon: 'key-round' },
                 { id: 'monitoring', label: 'Pantau Peserta', icon: 'activity' },
-                { id: 'tugas', label: 'Tugas Saya', icon: 'clipboard-check' },
+                { id: 'siswa', label: 'Data Siswa', icon: 'graduation-cap' },
             ];
 
             return `
@@ -1656,6 +1945,124 @@
             `;
         }
 
+        function renderKelasTab() {
+            return `
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <div>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Manajemen Kelas</h1>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-1">Tambahkan daftar kelas terlebih dahulu agar dapat dipilih saat menambahkan Siswa dan membuat Jadwal Ujian.</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200/70 p-6 shadow-2xs">
+                        <h2 class="text-sm font-bold text-slate-800 mb-4">Tambah Kelas Baru</h2>
+                        <form onsubmit="saveNewClass(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <input type="text" id="class-input-name" required placeholder="Nama Kelas (Contoh: Kelas X-A)" class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                            <input type="text" id="class-input-grade" placeholder="Tingkat / Jurusan (Contoh: Kelas X)" class="px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                            <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold shadow-sm transition flex items-center justify-center gap-1.5">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                <span>Tambah Kelas</span>
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200/70 p-6 shadow-2xs overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-100 text-[11px] font-bold uppercase text-slate-400">
+                                    <th class="py-3 px-3">Nama Kelas</th>
+                                    <th class="py-3 px-3">Tingkat / Keterangan</th>
+                                    <th class="py-3 px-3">Jumlah Siswa</th>
+                                    <th class="py-3 px-3 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${appState.classes.length === 0 ? `
+                                    <tr>
+                                        <td colspan="4" class="py-8 text-center text-xs text-slate-400">Belum ada data kelas. Silakan tambahkan kelas di atas.</td>
+                                    </tr>
+                                ` : appState.classes.map(cls => {
+                                    const studentCount = appState.participants.filter(p => p.className.toLowerCase() === cls.name.toLowerCase()).length;
+                                    return `
+                                        <tr class="hover:bg-slate-50/70">
+                                            <td class="py-3.5 px-3 font-bold text-slate-900">${cls.name}</td>
+                                            <td class="py-3.5 px-3 text-xs text-slate-500">${cls.grade_level || '-'}</td>
+                                            <td class="py-3.5 px-3">
+                                                <span class="px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-xs font-bold">${studentCount} Siswa</span>
+                                            </td>
+                                            <td class="py-3.5 px-3 text-right">
+                                                <button onclick="deleteClassItem('${cls.id}')" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition">Hapus</button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSiswaManagementTab() {
+            return `
+                <div class="max-w-5xl mx-auto space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Data Akun Siswa</h1>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-1">Kelola username, password, dan kelas siswa untuk login ke portal CBT.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 self-start">
+                            <button onclick="openImportExcelModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition">
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                                <span>Import Excel (.xlsx)</span>
+                            </button>
+                            <button onclick="openAddParticipantModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition">
+                                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                                <span>Tambah Siswa</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200/70 p-5 sm:p-6 shadow-2xs overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                    <th class="py-3 px-3">NAMA SISWA</th>
+                                    <th class="py-3 px-3">USERNAME / NISN</th>
+                                    <th class="py-3 px-3">PASSWORD</th>
+                                    <th class="py-3 px-3">KELAS</th>
+                                    <th class="py-3 px-3">RUANG</th>
+                                    <th class="py-3 px-3 text-right">AKSI</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${appState.participants.length === 0 ? `
+                                    <tr>
+                                        <td colspan="6" class="py-8 text-center text-xs text-slate-400">Belum ada data siswa. Klik "+ Tambah Siswa" atau "Import Excel (.xlsx)".</td>
+                                    </tr>
+                                ` : appState.participants.map(p => `
+                                    <tr class="hover:bg-slate-50/70">
+                                        <td class="py-3.5 px-3 font-bold text-slate-900">${p.name}</td>
+                                        <td class="py-3.5 px-3 font-mono text-xs text-slate-700">${p.username}</td>
+                                        <td class="py-3.5 px-3 font-mono text-xs text-indigo-600 font-bold">${p.password || '123456'}</td>
+                                        <td class="py-3.5 px-3">
+                                            <span class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">${p.className}</span>
+                                        </td>
+                                        <td class="py-3.5 px-3 text-xs text-slate-600">${p.room}</td>
+                                        <td class="py-3.5 px-3 text-right">
+                                            <div class="inline-flex items-center gap-1.5">
+                                                <button onclick="openAddParticipantModal('${p.id}')" class="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold">Edit</button>
+                                                <button onclick="removeParticipant('${p.id}')" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold">Hapus</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
         function renderJadwalTokenTab() {
             const isAdmin = session.proctorRole === 'admin';
             return `
@@ -1666,19 +2073,19 @@
                                 ${isAdmin ? 'Jadwal Ujian & Token' : 'Jadwal & Token'}
                             </h1>
                             <p class="text-xs sm:text-sm text-slate-500 mt-1">
-                                Semua jadwal ujian tersinkronisasi real-time dengan Supabase Cloud.
+                                Atur jadwal ujian, status dibuka/ditutup, dan token akses manual untuk siswa.
                             </p>
                         </div>
                         <button onclick="openScheduleModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition self-start sm:self-auto">
                             <i data-lucide="plus" class="w-4 h-4"></i>
-                            <span>Tambah Jadwal / Link GForm</span>
+                            <span>Tambah Jadwal Ujian</span>
                         </button>
                     </div>
 
                     ${appState.exams.length === 0 ? `
                         <div class="bg-white rounded-2xl border border-slate-200/70 p-10 text-center">
                             <p class="text-sm font-semibold text-slate-600 mb-1">Belum ada jadwal ujian di database</p>
-                            <p class="text-xs text-slate-400">Klik tombol "Tambah Jadwal / Link GForm" di atas untuk membuat jadwal ujian pertama.</p>
+                            <p class="text-xs text-slate-400">Pastikan Anda sudah menambahkan Kelas di menu Kelas, lalu klik "+ Tambah Jadwal Ujian".</p>
                         </div>
                     ` : `
                         <div class="space-y-4">
@@ -1688,17 +2095,18 @@
                                     : ex.status === 'Belum Mulai'
                                         ? 'bg-amber-100/80 text-amber-700'
                                         : 'bg-slate-100 text-slate-600';
+                                const durationMins = Math.round((ex.durationSeconds || 5400) / 60);
 
                                 return `
                                     <div class="bg-white rounded-2xl border border-slate-200/70 p-5 sm:p-6 shadow-2xs hover:shadow-md transition">
                                         <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                             <div>
-                                                <div class="flex items-center gap-2.5">
+                                                <div class="flex flex-wrap items-center gap-2.5">
                                                     <h2 class="text-lg sm:text-xl font-bold text-slate-900">${ex.subject}</h2>
                                                     ${ex.gformUrl ? `<span class="px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 text-[10px] font-bold">Google Form Aktif</span>` : `<span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-semibold">Link Form Belum Diatur</span>`}
                                                 </div>
-                                                <p class="text-xs sm:text-sm text-slate-500 mt-1">${ex.className} • ${ex.dateStr}</p>
-                                                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">${ex.sessionStr}</p>
+                                                <p class="text-xs sm:text-sm text-slate-500 mt-1"><strong>${ex.className}</strong> • ${ex.dateStr}</p>
+                                                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">${ex.sessionStr} • Durasi ${durationMins} Menit • Maks Pelanggaran ${ex.maxViolations}x</p>
                                                 <div class="mt-3">
                                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${statusBadge}">
                                                         ${ex.status}
@@ -1707,20 +2115,18 @@
                                             </div>
 
                                             <div class="md:text-right bg-slate-50 md:bg-transparent p-3.5 md:p-0 rounded-xl">
-                                                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">TOKEN UJIAN</div>
+                                                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">TOKEN UJIAN (MANUAL)</div>
                                                 <div class="font-mono font-extrabold text-2xl sm:text-3xl tracking-[0.22em] text-indigo-600 mt-0.5">
                                                     ${ex.token}
                                                 </div>
-                                                <div class="text-xs text-slate-500 mt-1">
-                                                    Berganti dalam <span class="font-bold text-slate-700 token-countdown-text">${formatTimeMS(appState.tokenCountdown)}</span>
-                                                </div>
+                                                <div class="text-[11px] text-slate-400 mt-1">Diatur manual oleh Admin</div>
                                             </div>
                                         </div>
 
                                         <div class="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2.5">
                                             <button onclick="rotateExamToken('${ex.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition">
                                                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-                                                <span>Ganti Token</span>
+                                                <span>Acak Token</span>
                                             </button>
                                             <button onclick="goToMonitorExam('${ex.id}')" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition">
                                                 <i data-lucide="activity" class="w-3.5 h-3.5"></i>
@@ -1733,7 +2139,7 @@
                                             ${ex.status !== 'Berlangsung' ? `
                                                 <button onclick="startExamSession('${ex.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/70 text-xs font-semibold transition">
                                                     <i data-lucide="play" class="w-3.5 h-3.5"></i>
-                                                    <span>Mulai Ujian</span>
+                                                    <span>Buka Ujian</span>
                                                 </button>
                                             ` : `
                                                 <button onclick="endExamSession('${ex.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 text-xs font-semibold transition">
@@ -1743,7 +2149,7 @@
                                             `}
                                             <button onclick="openScheduleModal('${ex.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-slate-700 text-xs font-semibold transition ml-auto">
                                                 <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                                                <span>Edit / Atur URL Google Form</span>
+                                                <span>Edit Jadwal / Token / GForm</span>
                                             </button>
                                         </div>
                                     </div>
@@ -1758,7 +2164,7 @@
         function renderMonitoringTab() {
             const selectedExam = appState.exams.find(e => e.id === appState.selectedMonitoringExamId) || appState.exams[0];
             const filteredParticipants = selectedExam
-                ? appState.participants.filter(p => p.examId === selectedExam.id)
+                ? appState.participants.filter(p => p.className.toLowerCase() === selectedExam.className.toLowerCase() || p.examId === selectedExam.id)
                 : appState.participants;
 
             const countMengerjakan = filteredParticipants.filter(p => p.status === 'Mengerjakan').length;
@@ -1773,7 +2179,7 @@
                         <div>
                             <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Monitoring Ujian</h1>
                             <p class="text-xs sm:text-sm text-slate-500 mt-1">
-                                Pantau peserta secara langsung: status, pelanggaran, dan kunci ujian.
+                                Pantau peserta secara langsung: status, pelanggaran, dan buka kunci ujian.
                             </p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 self-start">
@@ -1783,12 +2189,11 @@
                             </button>
                             <button onclick="openAddParticipantModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition">
                                 <i data-lucide="user-plus" class="w-4 h-4"></i>
-                                <span>Tambah Peserta</span>
+                                <span>Tambah Siswa</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Pilih Ujian Dropdown -->
                     ${appState.exams.length > 0 ? `
                         <div class="bg-white rounded-2xl border border-slate-200/70 p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Pilih Jadwal Ujian:</span>
@@ -1798,7 +2203,6 @@
                         </div>
                     ` : ''}
 
-                    <!-- Peserta & Status Cards -->
                     <div class="bg-white rounded-2xl border border-slate-200/70 p-5 sm:p-6 shadow-2xs">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-base sm:text-lg font-bold text-slate-900">Peserta (${filteredParticipants.length})</h2>
@@ -1808,7 +2212,6 @@
                             </button>
                         </div>
 
-                        <!-- 5 Pastel Metric Cards -->
                         <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
                             <div class="rounded-xl bg-emerald-50/90 p-4 text-center border border-emerald-100/80">
                                 <div class="text-2xl font-extrabold text-emerald-700">${countMengerjakan}</div>
@@ -1832,7 +2235,6 @@
                             </div>
                         </div>
 
-                        <!-- Participants Table -->
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
@@ -1848,7 +2250,7 @@
                                 <tbody class="divide-y divide-slate-100 text-sm">
                                     ${filteredParticipants.length === 0 ? `
                                         <tr>
-                                            <td colspan="6" class="py-8 text-center text-slate-400 text-xs">Belum ada peserta terdaftar pada ujian ini. Klik "Import Excel (.xlsx)" atau "+ Tambah Peserta".</td>
+                                            <td colspan="6" class="py-8 text-center text-slate-400 text-xs">Belum ada peserta terdaftar pada kelas/ujian ini.</td>
                                         </tr>
                                     ` : filteredParticipants.map(p => {
                                         let badgeClass = 'bg-slate-100 text-slate-600';
@@ -1889,12 +2291,9 @@
                                                         <button onclick="openParticipantHistory('${p.id}')" class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition" title="Riwayat Pelanggaran">
                                                             <i data-lucide="history" class="w-3.5 h-3.5"></i>
                                                         </button>
-                                                        <button onclick="allowReentryParticipant('${p.id}')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition" title="Izinkan Masuk Ulang">
+                                                        <button onclick="allowReentryParticipant('${p.id}')" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition" title="Reset Status Ujian">
                                                             <i data-lucide="refresh-cw" class="w-3 h-3"></i>
                                                             <span>Masuk Ulang</span>
-                                                        </button>
-                                                        <button onclick="removeParticipant('${p.id}')" class="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/60 transition" title="Hapus Peserta">
-                                                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
                                                         </button>
                                                     </div>
                                                 </td>
@@ -1999,27 +2398,16 @@
             const totalTerkunci = appState.participants.filter(p => p.status === 'Terkunci').length;
             const totalSelesai = appState.participants.filter(p => p.status === 'Selesai').length;
 
-            const uniqueClasses = [...new Set(appState.participants.map(p => p.className))];
-            const uniqueRooms = [...new Set(appState.participants.map(p => p.room))];
-
-            const titles = {
-                dashboard: 'Ringkasan Dashboard Ujian',
-                kelas: 'Daftar Kelas Terdaftar',
-                sesi: 'Manajemen Sesi Ujian',
-                ruang: 'Daftar Ruang Ujian',
-                tugas: 'Tugas Kepengawasan Anda'
-            };
-
             return `
                 <div class="max-w-5xl mx-auto space-y-6">
                     <div>
-                        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">${titles[tabId] || 'Ringkasan'}</h1>
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Ringkasan Dashboard Ujian</h1>
                         <p class="text-xs sm:text-sm text-slate-500 mt-1">Data langsung dari database produksi ${appState.settings.schoolName}.</p>
                     </div>
 
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div class="bg-white p-5 rounded-2xl border border-slate-200/70">
-                            <div class="text-xs font-semibold text-slate-400">Total Peserta</div>
+                            <div class="text-xs font-semibold text-slate-400">Total Akun Siswa</div>
                             <div class="text-2xl font-extrabold text-slate-900 mt-1">${totalPeserta}</div>
                         </div>
                         <div class="bg-white p-5 rounded-2xl border border-slate-200/70">
@@ -2037,16 +2425,20 @@
                     </div>
 
                     <div class="bg-white rounded-2xl border border-slate-200/70 p-6">
-                        <h3 class="font-bold text-base text-slate-900 mb-3">Ringkasan Kelas, Ruang & Sesi Aktif</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                            <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                                <div class="font-bold text-slate-700 mb-1">Kelas Terdaftar (${uniqueClasses.length})</div>
-                                <div class="text-slate-500">${uniqueClasses.length > 0 ? uniqueClasses.join(', ') : 'Belum ada data kelas'}</div>
-                            </div>
-                            <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                                <div class="font-bold text-slate-700 mb-1">Ruang Ujian (${uniqueRooms.length})</div>
-                                <div class="text-slate-500">${uniqueRooms.length > 0 ? uniqueRooms.join(', ') : 'Belum ada data ruang'}</div>
-                            </div>
+                        <h3 class="font-bold text-base text-slate-900 mb-3">Akses Cepat Menu Manajemen</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                            <button onclick="setProctorTab('kelas')" class="p-4 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200/70 text-left transition">
+                                <div class="font-bold text-slate-800 mb-1">1. Kelola Kelas (${appState.classes.length})</div>
+                                <div class="text-slate-500">Tambah atau hapus daftar kelas sekolah.</div>
+                            </button>
+                            <button onclick="setProctorTab('siswa')" class="p-4 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200/70 text-left transition">
+                                <div class="font-bold text-slate-800 mb-1">2. Kelola Akun Siswa (${totalPeserta})</div>
+                                <div class="text-slate-500">Tambah siswa manual atau import Excel (.xlsx).</div>
+                            </button>
+                            <button onclick="setProctorTab('jadwal')" class="p-4 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200/70 text-left transition">
+                                <div class="font-bold text-slate-800 mb-1">3. Jadwal & Token Ujian (${appState.exams.length})</div>
+                                <div class="text-slate-500">Buat jadwal mapel, pilih kelas, dan atur token manual.</div>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2055,7 +2447,11 @@
 
         function renderProctorView() {
             let contentHtml = '';
-            if (session.proctorTab === 'jadwal') {
+            if (session.proctorTab === 'kelas') {
+                contentHtml = renderKelasTab();
+            } else if (session.proctorTab === 'siswa') {
+                contentHtml = renderSiswaManagementTab();
+            } else if (session.proctorTab === 'jadwal') {
                 contentHtml = renderJadwalTokenTab();
             } else if (session.proctorTab === 'monitoring') {
                 contentHtml = renderMonitoringTab();
@@ -2086,6 +2482,8 @@
             const root = document.getElementById('app');
             if (session.view === 'login') {
                 root.innerHTML = renderLoginView();
+            } else if (session.view === 'student_dashboard') {
+                root.innerHTML = renderStudentDashboardView();
             } else if (session.view === 'student') {
                 root.innerHTML = renderStudentExamView();
             } else if (session.view === 'proctor') {
