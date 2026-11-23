@@ -175,11 +175,15 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tanggal Pelaksanaan</label>
-                        <input type="text" id="input-date" required placeholder="Contoh: Senin, 23 November 2026" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                        <input type="date" id="input-date" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Sesi & Waktu</label>
-                        <input type="text" id="input-session" required placeholder="Contoh: Sesi 1 • 07:30-09:30" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Waktu Mulai & Selesai</label>
+                        <div class="flex items-center gap-2">
+                            <input type="time" id="input-time-start" required onchange="autoCalculateDurationFromTimes()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                            <span class="text-xs font-bold text-slate-400">s/d</span>
+                            <input type="time" id="input-time-end" required onchange="autoCalculateDurationFromTimes()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                        </div>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -339,7 +343,7 @@
 
     <script>
         // =========================================================================
-        // 0. KONFIGURASI SUPABASE (TERHUBUNG KE PROYEK ANDA)
+        // 0. KONFIGURASI SUPABASE & STATE MANAGEMENT
         // =========================================================================
         const SUPABASE_URL = 'https://ihxfufwpsefvsfoqxgxm.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloeGZ1Zndwc2VmdnNmb3F4Z3htIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTUzNjIwNDgsImV4cCI6MjExMDkzODA0OH0.cY6N1kc-QX0iKZKH5Li7TiQTLryDisIA3PMuWKAuze4';
@@ -348,26 +352,23 @@
             !SUPABASE_URL.includes('ISI-PROJECT-ID-ANDA') &&
             SUPABASE_ANON_KEY &&
             !SUPABASE_ANON_KEY.includes('ISI-ANON-PUBLIC-KEY-ANDA');
+
         const isSandboxedPreview =
-            window.location.protocol === 'about:' ||
             window.location.protocol === 'blob:' ||
-            window.location.hostname === '' ||
-            window.frameElement !== null;
+            window.location.protocol === 'about:' ||
+            window.location.protocol === 'data:' ||
+            window.location.hostname.includes('scf.usercontent.goog');
+
         const supabaseClient = isSupabaseConfigured && window.supabase
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-                realtime: {
-                    params: { eventsPerSecond: 5 }
-                }
+                realtime: { params: { eventsPerSecond: 2 } }
             })
             : null;
 
-        // =========================================================================
-        // 1. STATE MANAGEMENT & SINKRONISASI SUPABASE REALTIME (100% CLOUD)
-        // =========================================================================
         const SESSION_KEY = 'portal_ujian_session_prod_v3';
 
         let session = {
-            view: 'login', // 'login' | 'student_dashboard' | 'student' | 'proctor'
+            view: 'login',
             loginTab: 'siswa',
             proctorRole: 'pengawas',
             proctorName: 'Pengawas Ruang',
@@ -415,93 +416,159 @@
             } catch (e) {}
         }
 
+        loadSessionState();
+
         // =========================================================================
-        // 2. SUPABASE CLOUD SYNC FUNCTIONS
+        // 1. HELPER FORMAT WAKTU, TANGGAL, MULTI-KELAS & JADWAL OTOMATIS
         // =========================================================================
-        let fallbackPollingInterval = null;
+        const INDO_DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const INDO_MONTHS = [
+            'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        ];
 
-        async function fetchAllCloudData(silent = false) {
-            if (!supabaseClient) return;
-            const [
-                { data: classesData, error: errClasses },
-                { data: examsData, error: errExams },
-                { data: participantsData, error: errParts },
-                { data: staffData, error: errStaff },
-                { data: settingsData, error: errSet }
-            ] = await Promise.all([
-                supabaseClient.from('classes').select('*').order('name', { ascending: true }),
-                supabaseClient.from('exams').select('*').order('subject', { ascending: true }),
-                supabaseClient.from('participants').select('*').order('name', { ascending: true }),
-                supabaseClient.from('staff_users').select('*'),
-                supabaseClient.from('school_settings').select('*').eq('id', 1).maybeSingle()
-            ]);
-
-            if (errExams || errParts || errStaff || errSet) {
-                throw new Error((errExams || errParts || errStaff || errSet).message);
-            }
-
-            if (settingsData) {
-                appState.settings = {
-                    schoolName: settingsData.school_name,
-                    portalTitle: settingsData.portal_title,
-                    academicYear: settingsData.academic_year
-                };
-                document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
-            }
-
-            appState.classes = classesData || [];
-            appState.staffUsers = staffData || [];
-
-            appState.exams = (examsData || []).map(row => ({
-                id: row.id,
-                subject: row.subject,
-                className: row.class_name,
-                dateStr: row.date_str,
-                sessionStr: row.session_str,
-                status: row.status,
-                token: row.token,
-                durationSeconds: row.duration_seconds,
-                maxViolations: row.max_violations,
-                gformUrl: row.gform_url || '',
-                formTitle: row.form_title || ''
-            }));
-
-            if (appState.exams.length > 0 && !appState.exams.some(e => e.id === appState.selectedMonitoringExamId)) {
-                appState.selectedMonitoringExamId = appState.exams[0].id;
-            }
-
-            appState.participants = (participantsData || []).map(row => ({
-                id: row.id,
-                name: row.name,
-                username: row.username,
-                password: row.password || '123456',
-                email: row.email || '',
-                className: row.class_name,
-                room: row.room,
-                examId: row.exam_id,
-                status: row.status,
-                violations: row.violations,
-                maxViolations: row.max_violations,
-                lastViolationReason: row.last_violation_reason || '',
-                violationLogs: row.violation_logs || [],
-                lastActive: row.last_active || '-',
-                remainingSeconds: row.remaining_seconds,
-                answers: row.answers || {}
-            }));
-
-            checkStudentLockState();
-            if (!silent) renderApp();
+        function formatTimeHMS(totalSeconds) {
+            const sec = Math.max(0, Math.floor(totalSeconds));
+            const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+            const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+            const s = String(sec % 60).padStart(2, '0');
+            return `${h}:${m}:${s}`;
         }
 
-        function startFallbackPolling() {
-            if (fallbackPollingInterval) return;
-            fallbackPollingInterval = setInterval(async () => {
-                try {
-                    await fetchAllCloudData(false);
-                } catch (e) {}
-            }, 8000);
+        function generateRandomToken() {
+            return String(Math.floor(10000 + Math.random() * 90000));
         }
 
+        function parseExamClasses(classNameStr) {
+            if (!classNameStr) return [];
+            return String(classNameStr).split(',').map(s => s.trim()).filter(Boolean);
+        }
+
+        function examIncludesClass(examClassNameStr, targetClassName) {
+            if (!targetClassName) return false;
+            const list = parseExamClasses(examClassNameStr).map(c => c.toLowerCase());
+            return list.includes(String(targetClassName).trim().toLowerCase());
+        }
+
+        function formatIndoDateFromISO(isoStr) {
+            if (!isoStr) return '';
+            const parts = isoStr.split('-');
+            if (parts.length !== 3) return isoStr;
+            const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+            if (isNaN(d.getTime())) return isoStr;
+            return `${INDO_DAYS[d.getDay()]}, ${d.getDate()} ${INDO_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+        }
+
+        function parseISODateFromExam(dateStr) {
+            if (!dateStr) return new Date().toISOString().slice(0, 10);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) return dateStr.trim();
+            const cleaned = dateStr.replace(/^[^,]+,\s*/, '').trim();
+            const parts = cleaned.split(/\s+/);
+            if (parts.length >= 3) {
+                const day = String(parseInt(parts[0], 10)).padStart(2, '0');
+                const monthIdx = INDO_MONTHS.findIndex(m => m.toLowerCase() === parts[1].toLowerCase());
+                const year = parts[2];
+                if (monthIdx >= 0 && /^\d{4}$/.test(year)) {
+                    return `${year}-${String(monthIdx + 1).padStart(2, '0')}-${day}`;
+                }
+            }
+            return new Date().toISOString().slice(0, 10);
+        }
+
+        function parseTimesFromSessionStr(sessionStr, durationSeconds = 5400) {
+            const matches = String(sessionStr || '').match(/(\d{1,2})[:.](\d{2})/g);
+            if (matches && matches.length >= 2) {
+                const start = matches[0].replace('.', ':').padStart(5, '0');
+                const end = matches[1].replace('.', ':').padStart(5, '0');
+                return { start, end };
+            }
+            if (matches && matches.length === 1) {
+                const start = matches[0].replace('.', ':').padStart(5, '0');
+                const [h, m] = start.split(':').map(Number);
+                const endMins = h * 60 + m + Math.round((durationSeconds || 5400) / 60);
+                const endH = String(Math.floor(endMins / 60) % 24).padStart(2, '0');
+                const endM = String(endMins % 60).padStart(2, '0');
+                return { start, end: `${endH}:${endM}` };
+            }
+            return { start: '07:30', end: '09:00' };
+        }
+
+        function autoCalculateDurationFromTimes() {
+            const startVal = document.getElementById('input-time-start')?.value;
+            const endVal = document.getElementById('input-time-end')?.value;
+            const durInput = document.getElementById('input-duration');
+            if (!startVal || !endVal || !durInput) return;
+            const [sh, sm] = startVal.split(':').map(Number);
+            const [eh, em] = endVal.split(':').map(Number);
+            let diff = (eh * 60 + em) - (sh * 60 + sm);
+            if (diff <= 0) diff += 24 * 60;
+            durInput.value = diff;
+        }
+
+        function getExamScheduleWindow(exam) {
+            if (!exam || !exam.dateStr) return null;
+            const isoDate = parseISODateFromExam(exam.dateStr);
+            const [y, mo, d] = isoDate.split('-').map(Number);
+            if (!y || !mo || !d) return null;
+            const times = parseTimesFromSessionStr(exam.sessionStr, exam.durationSeconds);
+            const [sh, sm] = times.start.split(':').map(Number);
+            const [eh, em] = times.end.split(':').map(Number);
+            const startAt = new Date(y, mo - 1, d, sh, sm, 0);
+            let endAt = new Date(y, mo - 1, d, eh, em, 0);
+            if (endAt <= startAt) {
+                endAt = new Date(startAt.getTime() + (exam.durationSeconds || 5400) * 1000);
+            }
+            return { startAt, endAt };
+        }
+
+        function evaluateScheduledExamStatuses() {
+            if (!appState.exams || appState.exams.length === 0) return;
+            const now = new Date();
+            let changed = false;
+
+            appState.exams.forEach(ex => {
+                const win = getExamScheduleWindow(ex);
+                if (!win) return;
+
+                if (ex.status === 'Belum Mulai' && now >= win.startAt && now < win.endAt) {
+                    ex.status = 'Berlangsung';
+                    changed = true;
+                    syncExamToSupabase(ex);
+                    showToast(`Jadwal ${ex.subject} otomatis dibuka (Berlangsung)!`, 'success');
+                } else if (ex.status === 'Berlangsung' && now >= win.endAt) {
+                    ex.status = 'Selesai';
+                    changed = true;
+                    syncExamToSupabase(ex);
+                }
+            });
+
+            if (changed) {
+                renderApp();
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const colors = {
+                info: 'bg-slate-900 text-white border-slate-700',
+                success: 'bg-emerald-600 text-white border-emerald-500',
+                warning: 'bg-amber-500 text-white border-amber-400',
+                danger: 'bg-rose-600 text-white border-rose-500'
+            };
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-lg text-xs font-semibold flex items-center gap-2.5 transform transition-all duration-300 ${colors[type] || colors.info}`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        // =========================================================================
+        // 2. SUPABASE CLOUD SYNC & REALTIME / POLLING
+        // =========================================================================
         async function syncClassToSupabase(cls) {
             if (!supabaseClient || !cls) return;
             const { error } = await supabaseClient.from('classes').upsert({
@@ -552,7 +619,7 @@
                 answers: p.answers || {},
                 updated_at: new Date().toISOString()
             });
-            if (error) showToast('Gagal sinkronisasi siswa: ' + error.message, 'danger');
+            if (error) showToast('Gagal sinkronisasi siswa ke Supabase: ' + error.message, 'danger');
         }
 
         async function syncStaffToSupabase(staff) {
@@ -579,6 +646,101 @@
             if (error) showToast('Gagal menyimpan pengaturan ke Supabase: ' + error.message, 'danger');
         }
 
+        let pollingTimerId = null;
+        function startFallbackPolling() {
+            if (pollingTimerId) return;
+            pollingTimerId = setInterval(() => {
+                fetchAllCloudData(true);
+            }, 8000);
+        }
+
+        async function fetchAllCloudData(silent = false) {
+            if (!supabaseClient) return;
+            try {
+                const [
+                    { data: classesData, error: errClasses },
+                    { data: examsData, error: errExams },
+                    { data: participantsData, error: errParts },
+                    { data: staffData, error: errStaff },
+                    { data: settingsData, error: errSet }
+                ] = await Promise.all([
+                    supabaseClient.from('classes').select('*').order('name', { ascending: true }),
+                    supabaseClient.from('exams').select('*').order('subject', { ascending: true }),
+                    supabaseClient.from('participants').select('*').order('name', { ascending: true }),
+                    supabaseClient.from('staff_users').select('*'),
+                    supabaseClient.from('school_settings').select('*').eq('id', 1).maybeSingle()
+                ]);
+
+                if (errClasses || errExams || errParts || errStaff || errSet) {
+                    throw new Error((errClasses || errExams || errParts || errStaff || errSet).message);
+                }
+
+                if (settingsData) {
+                    appState.settings = {
+                        schoolName: settingsData.school_name,
+                        portalTitle: settingsData.portal_title,
+                        academicYear: settingsData.academic_year
+                    };
+                    document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
+                }
+
+                appState.classes = classesData || [];
+                appState.staffUsers = staffData || [];
+
+                appState.exams = (examsData || []).map(row => ({
+                    id: row.id,
+                    subject: row.subject,
+                    className: row.class_name,
+                    dateStr: row.date_str,
+                    sessionStr: row.session_str,
+                    status: row.status,
+                    token: row.token,
+                    durationSeconds: row.duration_seconds,
+                    maxViolations: row.max_violations,
+                    gformUrl: row.gform_url || '',
+                    formTitle: row.form_title || ''
+                }));
+
+                if (appState.exams.length > 0 && !appState.exams.some(e => e.id === appState.selectedMonitoringExamId)) {
+                    appState.selectedMonitoringExamId = appState.exams[0].id;
+                }
+
+                appState.participants = (participantsData || []).map(row => {
+                    const localExisting = appState.participants.find(lp => lp.id === row.id);
+                    const keepLocalRemaining = session.view === 'student' && session.activeStudentId === row.id && localExisting;
+                    return {
+                        id: row.id,
+                        name: row.name,
+                        username: row.username,
+                        password: row.password || '123456',
+                        email: row.email || '',
+                        className: row.class_name,
+                        room: row.room,
+                        examId: row.exam_id,
+                        status: row.status,
+                        violations: row.violations,
+                        maxViolations: row.max_violations,
+                        lastViolationReason: row.last_violation_reason || '',
+                        violationLogs: row.violation_logs || [],
+                        lastActive: row.last_active || '-',
+                        remainingSeconds: keepLocalRemaining ? localExisting.remainingSeconds : row.remaining_seconds,
+                        answers: row.answers || {}
+                    };
+                });
+
+                session.isLoadingCloud = false;
+                evaluateScheduledExamStatuses();
+                checkStudentLockState();
+                renderApp();
+            } catch (err) {
+                session.isLoadingCloud = false;
+                if (!silent) {
+                    showToast('Gagal memuat data dari Supabase: ' + err.message, 'danger');
+                    renderApp();
+                }
+            }
+        }
+
         async function initSupabaseRealtime() {
             if (!supabaseClient) {
                 session.isLoadingCloud = false;
@@ -586,183 +748,54 @@
                 showToast('Konfigurasi SUPABASE_URL dan SUPABASE_ANON_KEY belum diisi!', 'danger');
                 return;
             }
+
+            await fetchAllCloudData(false);
+
+            if (isSandboxedPreview) {
+                startFallbackPolling();
+                return;
+            }
+
             try {
-                await fetchAllCloudData(true);
-
-                session.isLoadingCloud = false;
-                saveState();
-                checkStudentLockState();
-                renderApp();
-
-                if (isSandboxedPreview || typeof WebSocket === 'undefined') {
-                    startFallbackPolling();
-                } else {
-                    try {
-                        supabaseClient
-                            .channel('cbt-production-realtime')
-                            .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, (payload) => {
-                                if (payload.eventType === 'DELETE') {
-                                    appState.classes = appState.classes.filter(c => c.id !== payload.old.id);
-                                } else {
-                                    const idx = appState.classes.findIndex(c => c.id === payload.new.id);
-                                    if (idx >= 0) appState.classes[idx] = payload.new;
-                                    else appState.classes.push(payload.new);
-                                }
-                                renderApp();
-                            })
-                            .on('postgres_changes', { event: '*', schema: 'public', table: 'exams' }, (payload) => {
-                                if (payload.eventType === 'DELETE') {
-                                    appState.exams = appState.exams.filter(e => e.id !== payload.old.id);
-                                } else {
-                                    const row = payload.new;
-                                    const mapped = {
-                                        id: row.id,
-                                        subject: row.subject,
-                                        className: row.class_name,
-                                        dateStr: row.date_str,
-                                        sessionStr: row.session_str,
-                                        status: row.status,
-                                        token: row.token,
-                                        durationSeconds: row.duration_seconds,
-                                        maxViolations: row.max_violations,
-                                        gformUrl: row.gform_url || '',
-                                        formTitle: row.form_title || ''
-                                    };
-                                    const idx = appState.exams.findIndex(e => e.id === row.id);
-                                    if (idx >= 0) appState.exams[idx] = mapped;
-                                    else appState.exams.push(mapped);
-                                }
-                                renderApp();
-                            })
-                            .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, (payload) => {
-                                if (payload.eventType === 'DELETE') {
-                                    appState.participants = appState.participants.filter(p => p.id !== payload.old.id);
-                                } else {
-                                    const row = payload.new;
-                                    const mapped = {
-                                        id: row.id,
-                                        name: row.name,
-                                        username: row.username,
-                                        password: row.password || '123456',
-                                        email: row.email || '',
-                                        className: row.class_name,
-                                        room: row.room,
-                                        examId: row.exam_id,
-                                        status: row.status,
-                                        violations: row.violations,
-                                        maxViolations: row.max_violations,
-                                        lastViolationReason: row.last_violation_reason || '',
-                                        violationLogs: row.violation_logs || [],
-                                        lastActive: row.last_active || '-',
-                                        remainingSeconds: row.remaining_seconds,
-                                        answers: row.answers || {}
-                                    };
-                                    const idx = appState.participants.findIndex(p => p.id === row.id);
-                                    if (idx >= 0) appState.participants[idx] = mapped;
-                                    else appState.participants.push(mapped);
-                                }
-                                checkStudentLockState();
-                                renderApp();
-                            })
-                            .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_users' }, (payload) => {
-                                if (payload.eventType === 'DELETE') {
-                                    appState.staffUsers = appState.staffUsers.filter(u => u.id !== payload.old.id);
-                                } else {
-                                    const idx = appState.staffUsers.findIndex(u => u.id === payload.new.id);
-                                    if (idx >= 0) appState.staffUsers[idx] = payload.new;
-                                    else appState.staffUsers.push(payload.new);
-                                }
-                                renderApp();
-                            })
-                            .on('postgres_changes', { event: '*', schema: 'public', table: 'school_settings' }, (payload) => {
-                                if (payload.new) {
-                                    appState.settings = {
-                                        schoolName: payload.new.school_name,
-                                        portalTitle: payload.new.portal_title,
-                                        academicYear: payload.new.academic_year
-                                    };
-                                    document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
-                                    renderApp();
-                                }
-                            })
-                            .subscribe((status) => {
-                                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-                                    startFallbackPolling();
-                                }
-                            });
-                    } catch (wsErr) {
-                        startFallbackPolling();
-                    }
-                }
+                supabaseClient
+                    .channel('cbt-production-realtime')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, () => fetchAllCloudData(true))
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'exams' }, () => fetchAllCloudData(true))
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, () => fetchAllCloudData(true))
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'staff_users' }, () => fetchAllCloudData(true))
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'school_settings' }, () => fetchAllCloudData(true))
+                    .subscribe((status) => {
+                        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                            startFallbackPolling();
+                        }
+                    });
             } catch (err) {
-                console.error('Supabase init error:', err);
-                session.isLoadingCloud = false;
-                renderApp();
-                showToast('Gagal memuat data dari Supabase: ' + err.message, 'danger');
+                startFallbackPolling();
             }
         }
 
-        loadSessionState();
-
         // =========================================================================
-        // 3. HELPER FORMATTING & TOAST
-        // =========================================================================
-        function formatTimeHMS(totalSeconds) {
-            const sec = Math.max(0, Math.floor(totalSeconds));
-            const h = String(Math.floor(sec / 3600)).padStart(2, '0');
-            const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
-            const s = String(sec % 60).padStart(2, '0');
-            return `${h}:${m}:${s}`;
-        }
-
-        function generateRandomToken() {
-            return String(Math.floor(10000 + Math.random() * 90000));
-        }
-
-        function parseExamClasses(classNameStr) {
-            if (!classNameStr) return [];
-            return String(classNameStr).split(',').map(c => c.trim()).filter(Boolean);
-        }
-
-        function examIncludesClass(examClassStr, studentClassStr) {
-            if (!examClassStr || !studentClassStr) return false;
-            const target = String(studentClassStr).trim().toLowerCase();
-            return parseExamClasses(examClassStr).some(c => c.toLowerCase() === target);
-        }
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            const colors = {
-                info: 'bg-slate-900 text-white border-slate-700',
-                success: 'bg-emerald-600 text-white border-emerald-500',
-                warning: 'bg-amber-500 text-white border-amber-400',
-                danger: 'bg-rose-600 text-white border-rose-500'
-            };
-            toast.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg border text-xs font-semibold flex items-center gap-2.5 transform transition-all duration-300 translate-y-0 opacity-100 ${colors[type] || colors.info}`;
-            toast.innerHTML = `<span>${message}</span>`;
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.classList.add('opacity-0', '-translate-y-2');
-                setTimeout(() => toast.remove(), 300);
-            }, 3500);
-        }
-
-        // =========================================================================
-        // 4. SISTEM DETEKSI PELANGGARAN & FULLSCREEN ANTI-CURANG
+        // 4. ANTI-CHEAT ENGINE (FULLSCREEN, VISIBILITY, BLUR, LOCK STATE)
         // =========================================================================
         let lastViolationTimestamp = 0;
 
-        function triggerViolation(reason = 'Keluar dari layar penuh') {
-            if (session.view !== 'student') return;
+        function requestExamFullscreen() {
+            const elem = document.documentElement;
+            if (!document.fullscreenElement && elem.requestFullscreen) {
+                elem.requestFullscreen().catch(() => {});
+            }
+        }
+
+        function triggerViolation(reason) {
+            if (session.view !== 'student' || !session.activeStudentId || session.violationModalOpen) return;
             const student = appState.participants.find(p => p.id === session.activeStudentId);
-            if (!student || student.status === 'Selesai' || student.status === 'Terkunci') return;
+            if (!student || student.status === 'Terkunci' || student.status === 'Selesai') return;
 
             const now = Date.now();
-            if (now - lastViolationTimestamp < 1500) return;
+            if (now - lastViolationTimestamp < 2500) return;
             lastViolationTimestamp = now;
 
-            const exam = appState.exams.find(e => e.id === (session.activeExamId || student.examId)) || appState.exams[0];
+            const exam = appState.exams.find(e => e.id === (session.activeExamId || student.examId));
             const maxV = exam ? (exam.maxViolations || 3) : (student.maxViolations || 3);
 
             student.violations = (student.violations || 0) + 1;
@@ -780,19 +813,19 @@
                 student.status = 'Terkunci';
                 session.violationModalOpen = false;
                 document.getElementById('violation-modal').classList.add('hidden');
-                document.getElementById('locked-screen').classList.remove('hidden');
-                showToast('Batas pelanggaran tercapai! Ujian dikunci dan dilaporkan ke pengawas.', 'danger');
-            } else {
-                session.violationModalOpen = true;
-                document.getElementById('violation-reason').textContent = reason;
-                document.getElementById('violation-desc').innerHTML = `
-                    Pelanggaran <span class="font-bold text-slate-700">${student.violations} dari ${maxV}</span>. Pada pelanggaran ke-${maxV}, ujian Anda akan <span class="font-bold text-slate-700">terkunci</span> dan dilaporkan ke pengawas.
-                `;
-                document.getElementById('violation-modal').classList.remove('hidden');
+                syncParticipantToSupabase(student);
+                checkStudentLockState();
+                renderApp();
+                return;
             }
 
+            session.violationModalOpen = true;
+            document.getElementById('violation-reason').textContent = reason;
+            document.getElementById('violation-desc').innerHTML = `
+                Pelanggaran <span class="font-bold text-slate-700">${student.violations} dari ${maxV}</span>. Pada pelanggaran ke-${maxV}, ujian Anda akan <span class="font-bold text-slate-700">terkunci</span> dan dilaporkan ke pengawas.
+            `;
+            document.getElementById('violation-modal').classList.remove('hidden');
             syncParticipantToSupabase(student);
-            saveState();
             renderApp();
         }
 
@@ -800,49 +833,52 @@
             session.violationModalOpen = false;
             document.getElementById('violation-modal').classList.add('hidden');
             requestExamFullscreen();
+            renderApp();
         }
-
-        function requestExamFullscreen() {
-            const el = document.documentElement;
-            if (!document.fullscreenElement && el.requestFullscreen) {
-                el.requestFullscreen().catch(() => {});
-            }
-        }
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden && session.view === 'student') {
-                triggerViolation('Berpindah tab atau membuka aplikasi lain');
-            }
-        });
-
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement && session.view === 'student') {
-                const student = appState.participants.find(p => p.id === session.activeStudentId);
-                if (student && student.status === 'Mengerjakan' && !session.violationModalOpen) {
-                    triggerViolation('Keluar dari layar penuh');
-                }
-            }
-        });
 
         function checkStudentLockState() {
             const lockedScreen = document.getElementById('locked-screen');
+            if (!lockedScreen) return;
+
             if (session.view === 'student' && session.activeStudentId) {
                 const student = appState.participants.find(p => p.id === session.activeStudentId);
                 if (student && student.status === 'Terkunci') {
                     lockedScreen.classList.remove('hidden');
-                    document.getElementById('violation-modal').classList.add('hidden');
-                } else {
-                    lockedScreen.classList.add('hidden');
+                    return;
                 }
-            } else {
-                lockedScreen.classList.add('hidden');
             }
+            lockedScreen.classList.add('hidden');
         }
 
+        document.addEventListener('fullscreenchange', () => {
+            if (session.view === 'student' && !document.fullscreenElement && !session.violationModalOpen) {
+                triggerViolation('Keluar dari layar penuh');
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (session.view === 'student' && document.hidden && !session.violationModalOpen) {
+                triggerViolation('Berpindah tab atau aplikasi lain');
+            }
+        });
+
+        window.addEventListener('blur', () => {
+            if (session.view === 'student' && !session.violationModalOpen) {
+                setTimeout(() => {
+                    if (document.activeElement && document.activeElement.tagName === 'IFRAME') return;
+                    if (document.hidden || !document.hasFocus()) {
+                        triggerViolation('Meninggalkan jendela ujian');
+                    }
+                }, 200);
+            }
+        });
+
         // =========================================================================
-        // 5. TIMER REAL-TIME SISA WAKTU SISWA
+        // 5. TIMER REAL-TIME SISA WAKTU SISWA & PENGECEKAN JADWAL OTOMATIS
         // =========================================================================
         setInterval(() => {
+            evaluateScheduledExamStatuses();
+
             if (session.view === 'student' && session.activeStudentId) {
                 const student = appState.participants.find(p => p.id === session.activeStudentId);
                 if (student && student.status === 'Mengerjakan') {
@@ -1629,22 +1665,28 @@
 
             if (examId) {
                 const ex = appState.exams.find(e => e.id === examId);
+                const parsedTimes = parseTimesFromSessionStr(ex.sessionStr, ex.durationSeconds);
                 document.getElementById('schedule-modal-title').textContent = `Edit Jadwal Ujian — ${ex.subject}`;
                 document.getElementById('edit-exam-id').value = ex.id;
                 document.getElementById('input-subject').value = ex.subject;
                 classListContainer.innerHTML = getClassCheckboxesHtml(ex.className);
-                document.getElementById('input-date').value = ex.dateStr;
-                document.getElementById('input-session').value = ex.sessionStr;
+                document.getElementById('input-date').value = parseISODateFromExam(ex.dateStr);
+                document.getElementById('input-time-start').value = parsedTimes.start;
+                document.getElementById('input-time-end').value = parsedTimes.end;
                 document.getElementById('input-status').value = ex.status;
                 document.getElementById('input-duration').value = Math.round(ex.durationSeconds / 60);
                 document.getElementById('input-max-violations').value = ex.maxViolations || 3;
                 document.getElementById('input-token').value = ex.token || generateRandomToken();
                 document.getElementById('input-gform-url').value = ex.gformUrl || '';
             } else {
+                const todayISO = new Date().toISOString().slice(0, 10);
                 document.getElementById('schedule-modal-title').textContent = 'Tambah Jadwal Ujian Baru';
                 document.getElementById('edit-exam-id').value = '';
                 document.getElementById('schedule-form').reset();
                 classListContainer.innerHTML = getClassCheckboxesHtml();
+                document.getElementById('input-date').value = todayISO;
+                document.getElementById('input-time-start').value = '07:30';
+                document.getElementById('input-time-end').value = '09:00';
                 document.getElementById('input-max-violations').value = 3;
                 document.getElementById('input-token').value = generateRandomToken();
             }
@@ -1662,9 +1704,12 @@
             const subject = document.getElementById('input-subject').value.trim();
             const selectedClasses = Array.from(document.querySelectorAll('input[name="schedule-class-checkbox"]:checked')).map(cb => cb.value.trim());
             const className = selectedClasses.join(', ');
-            const dateStr = document.getElementById('input-date').value.trim();
-            const sessionStr = document.getElementById('input-session').value.trim();
-            const status = document.getElementById('input-status').value;
+            const rawDateISO = document.getElementById('input-date').value;
+            const timeStart = document.getElementById('input-time-start').value;
+            const timeEnd = document.getElementById('input-time-end').value;
+            const dateStr = formatIndoDateFromISO(rawDateISO);
+            const sessionStr = `Pukul ${timeStart} - ${timeEnd} WIB`;
+            let status = document.getElementById('input-status').value;
             const durationMins = parseInt(document.getElementById('input-duration').value, 10) || 90;
             const maxViolations = parseInt(document.getElementById('input-max-violations').value, 10) || 3;
             const token = document.getElementById('input-token').value.trim().toUpperCase() || generateRandomToken();
@@ -1673,6 +1718,14 @@
             if (selectedClasses.length === 0) {
                 showToast('Centang minimal 1 kelas untuk jadwal ujian ini!', 'warning');
                 return;
+            }
+
+            // Cek apakah tanggal & jam mulai sudah terlewati saat disimpan
+            const tempExam = { dateStr, sessionStr, durationSeconds: durationMins * 60, status };
+            const win = getExamScheduleWindow(tempExam);
+            const now = new Date();
+            if (win && status === 'Belum Mulai' && now >= win.startAt && now < win.endAt) {
+                status = 'Berlangsung';
             }
 
             if (id) {
