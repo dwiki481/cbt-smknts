@@ -425,7 +425,8 @@
             settings: {
                 schoolName: 'Portal Sekolah',
                 portalTitle: 'Portal Ujian Digital',
-                academicYear: '2026/2027'
+                academicYear: '2026/2027',
+                schoolLogo: ''
             },
             classes: [],
             staffUsers: [],
@@ -593,6 +594,7 @@
                 school_name: appState.settings.schoolName,
                 portal_title: appState.settings.portalTitle,
                 academic_year: appState.settings.academicYear,
+                school_logo: appState.settings.schoolLogo || '',
                 updated_at: new Date().toISOString()
             });
             if (error) showToast('Gagal menyimpan pengaturan ke Supabase: ' + error.message, 'danger');
@@ -634,7 +636,8 @@
                 appState.settings = {
                     schoolName: settingsData.school_name,
                     portalTitle: settingsData.portal_title,
-                    academicYear: settingsData.academic_year
+                    academicYear: settingsData.academic_year,
+                    schoolLogo: settingsData.school_logo || ''
                 };
                 document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
             }
@@ -792,7 +795,8 @@
                                 appState.settings = {
                                     schoolName: payload.new.school_name,
                                     portalTitle: payload.new.portal_title,
-                                    academicYear: payload.new.academic_year
+                                    academicYear: payload.new.academic_year,
+                                    schoolLogo: payload.new.school_logo || ''
                                 };
                                 document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
                                 renderApp();
@@ -1910,12 +1914,19 @@
         // --- VIEW 1: LOGIN SCREEN ---
         function renderLoginView() {
             const isSiswa = session.loginTab === 'siswa';
+            const logoUrl = appState.settings.schoolLogo;
             return `
                 <div class="min-h-screen flex flex-col justify-between px-4 py-8 bg-[#F4F6FA]">
                     <div class="flex-1 flex flex-col items-center justify-center">
-                        <div class="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 mb-5">
-                            <i data-lucide="graduation-cap" class="w-7 h-7"></i>
-                        </div>
+                        ${logoUrl ? `
+                            <div class="w-16 h-16 rounded-2xl bg-white p-2 flex items-center justify-center shadow-lg shadow-slate-200/80 border border-slate-100 mb-5 overflow-hidden">
+                                <img src="${logoUrl}" alt="Logo Sekolah" class="w-full h-full object-contain">
+                            </div>
+                        ` : `
+                            <div class="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 mb-5">
+                                <i data-lucide="graduation-cap" class="w-7 h-7"></i>
+                            </div>
+                        `}
 
                         <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight text-center">${appState.settings.portalTitle}</h1>
                         <p class="text-xs sm:text-sm text-slate-500 mt-1 mb-2 text-center">${appState.settings.schoolName} • Tahun Ajaran ${appState.settings.academicYear}</p>
@@ -1999,9 +2010,15 @@
                 <div class="min-h-screen flex flex-col bg-[#F4F6FA]">
                     <header class="bg-white border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between sticky top-0 z-30">
                         <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-                                <i data-lucide="graduation-cap" class="w-5 h-5"></i>
-                            </div>
+                            ${appState.settings.schoolLogo ? `
+                                <div class="w-9 h-9 rounded-xl bg-white border border-slate-200/80 p-1 flex items-center justify-center shadow-2xs overflow-hidden">
+                                    <img src="${appState.settings.schoolLogo}" alt="Logo" class="w-full h-full object-contain">
+                                </div>
+                            ` : `
+                                <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                                    <i data-lucide="graduation-cap" class="w-5 h-5"></i>
+                                </div>
+                            `}
                             <div>
                                 <div class="font-bold text-sm text-slate-900 leading-tight">${appState.settings.portalTitle}</div>
                                 <div class="text-[11px] text-slate-500">${appState.settings.schoolName}</div>
@@ -2185,9 +2202,15 @@
                 <div class="min-h-screen flex flex-col bg-[#F4F6FA]">
                     <header class="bg-white border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between sticky top-0 z-30">
                         <div class="flex items-center gap-3">
-                            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
-                                <i data-lucide="shield-check" class="w-5 h-5"></i>
-                            </div>
+                            ${appState.settings.schoolLogo ? `
+                                <div class="w-9 h-9 rounded-xl bg-white border border-slate-200/80 p-1 flex items-center justify-center shadow-2xs overflow-hidden">
+                                    <img src="${appState.settings.schoolLogo}" alt="Logo" class="w-full h-full object-contain">
+                                </div>
+                            ` : `
+                                <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100">
+                                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                                </div>
+                            `}
                             <div>
                                 <div class="font-bold text-sm text-slate-900 leading-tight">${appState.settings.portalTitle}</div>
                                 <div class="text-[11px] text-slate-500">${session.proctorName} • ${isAdmin ? 'Administrator' : 'Pengawas Ruang'}</div>
@@ -2834,6 +2857,55 @@
         }
 
         // --- TAB PENGATURAN ---
+        function handleSchoolLogoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showToast('Harap pilih file gambar (PNG, JPG, WebP, atau SVG).', 'warning');
+                return;
+            }
+            if (file.size > 3 * 1024 * 1024) {
+                showToast('Ukuran file gambar maksimal 3 MB.', 'warning');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const maxDim = 256;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const compressedDataUrl = canvas.toDataURL('image/png', 0.9);
+                    appState.settings.schoolLogo = compressedDataUrl;
+                    renderApp();
+                    showToast('Logo berhasil dipilih. Klik "Simpan Identitas Portal" untuk menyimpan ke database.', 'info');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeSchoolLogo() {
+            appState.settings.schoolLogo = '';
+            renderApp();
+            showToast('Logo dihapus dari pratinjau. Klik "Simpan Identitas Portal" untuk menerapkan.', 'info');
+        }
+
         function saveSystemSettings(e) {
             e.preventDefault();
             appState.settings.schoolName = document.getElementById('set-school-name').value.trim();
@@ -2842,7 +2914,7 @@
             document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
             syncSettingsToSupabase();
             renderApp();
-            showToast('Pengaturan identitas sekolah berhasil disimpan!', 'success');
+            showToast('Pengaturan identitas & logo sekolah berhasil disimpan!', 'success');
         }
 
         function addStaffAccount(e) {
@@ -2881,6 +2953,33 @@
                                 <span>Identitas Sekolah & Portal</span>
                             </h2>
                             <form onsubmit="saveSystemSettings(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Logo Sekolah</label>
+                                    <div class="flex items-center gap-4 p-3 rounded-xl border border-slate-200/80 bg-slate-50/70">
+                                        <div class="w-14 h-14 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                                            ${appState.settings.schoolLogo
+                                                ? `<img src="${appState.settings.schoolLogo}" alt="Preview Logo" class="w-full h-full object-contain p-1">`
+                                                : `<i data-lucide="image" class="w-6 h-6 text-slate-300"></i>`
+                                            }
+                                        </div>
+                                        <div class="flex-1 space-y-1.5">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <label class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition">
+                                                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                                    <span>Pilih Logo</span>
+                                                    <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onchange="handleSchoolLogoUpload(event)" class="hidden">
+                                                </label>
+                                                ${appState.settings.schoolLogo ? `
+                                                    <button type="button" onclick="removeSchoolLogo()" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition">
+                                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                        <span>Hapus</span>
+                                                    </button>
+                                                ` : ''}
+                                            </div>
+                                            <p class="text-[11px] text-slate-400">Format PNG / JPG / WebP (maks. 3 MB). Otomatis tampil di halaman Login & Header.</p>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div>
                                     <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nama Sekolah / Institusi</label>
                                     <input type="text" id="set-school-name" value="${appState.settings.schoolName}" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
