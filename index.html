@@ -1276,11 +1276,6 @@
             const selectedList = parseExamClasses(selectedClassesStr);
             const selectedLower = selectedList.map(c => c.toLowerCase());
             const allClassNames = appState.classes.map(c => c.name);
-            selectedList.forEach(sc => {
-                if (!allClassNames.some(ac => ac.toLowerCase() === sc.toLowerCase())) {
-                    allClassNames.unshift(sc);
-                }
-            });
             if (allClassNames.length === 0) {
                 return `<div class="text-xs text-slate-400 py-1">Belum ada data kelas. Tambahkan di menu Kelas.</div>`;
             }
