@@ -1070,11 +1070,22 @@
                 if (student && student.status === 'Mengerjakan' && !session.violationModalOpen) {
                     if (student.remainingSeconds > 0) {
                         student.remainingSeconds -= 1;
+                        if (student.remainingSeconds === 60) {
+                            showToast('PERINGATAN: Sisa waktu pengerjaan tinggal 1 menit! Segera klik Kirim (Submit) di Google Form sekarang!', 'danger');
+                            const bannerEl = document.getElementById('one-minute-warning-banner');
+                            if (bannerEl) bannerEl.classList.remove('hidden');
+                        }
                         if (student.remainingSeconds % 15 === 0) {
                             syncParticipantToSupabase(student);
                         }
                         const timerEl = document.getElementById('student-timer-display');
-                        if (timerEl) timerEl.textContent = formatTimeHMS(student.remainingSeconds);
+                        if (timerEl) {
+                            timerEl.textContent = formatTimeHMS(student.remainingSeconds);
+                            if (student.remainingSeconds <= 60) {
+                                timerEl.classList.remove('text-slate-900');
+                                timerEl.classList.add('text-rose-600', 'animate-pulse');
+                            }
+                        }
                     } else {
                         finishStudentExam(true);
                     }
@@ -2135,7 +2146,7 @@
                         <div class="flex items-center gap-3 sm:gap-4">
                             <div class="text-right">
                                 <div class="text-[9px] font-bold tracking-wider uppercase text-slate-400">SISA WAKTU</div>
-                                <div id="student-timer-display" class="font-mono font-bold text-sm sm:text-base text-slate-900 leading-tight">
+                                <div id="student-timer-display" class="font-mono font-bold text-sm sm:text-base ${student.remainingSeconds <= 60 ? 'text-rose-600 animate-pulse' : 'text-slate-900'} leading-tight">
                                     ${formatTimeHMS(student.remainingSeconds)}
                                 </div>
                             </div>
@@ -2144,6 +2155,11 @@
                             </button>
                         </div>
                     </header>
+
+                    <div id="one-minute-warning-banner" class="${student.remainingSeconds <= 60 ? '' : 'hidden'} bg-rose-600 text-white px-4 py-2.5 text-center flex items-center justify-center gap-2 text-xs sm:text-sm font-bold shadow-md animate-pulse">
+                        <i data-lucide="alarm-clock" class="w-4 h-4 shrink-0"></i>
+                        <span>PERHATIAN! Sisa waktu ujian Anda tinggal 1 MENIT! Segera tekan tombol KIRIM (SUBMIT) di bagian bawah Google Form sebelum waktu habis dan tertutup otomatis!</span>
+                    </div>
 
                     <div class="bg-[#FFFBEB] border-b border-amber-200/70 px-4 py-2 text-center flex items-center justify-center gap-2 text-[11px] sm:text-xs text-amber-800">
                         <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
