@@ -1170,8 +1170,34 @@
 
         function openParticipantHistory(participantId) {
             const p = appState.participants.find(item => item.id === participantId);
+            if (!p) return;
+            const body = document.getElementById('history-modal-body');
+            const logs = p.violationLogs || [];
+            if (logs.length === 0) {
+                body.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs">Tidak ada catatan pelanggaran untuk <strong>${p.name}</strong>.</div>`;
+            } else {
+                body.innerHTML = `<div class="font-bold text-slate-800 mb-2">${p.name} (${p.className})</div>` +
+                    logs.map(l => `
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                            <div>
+                                <div class="font-semibold text-slate-800">${l.reason}</div>
+                                <div class="text-[11px] text-slate-400">Pukul ${l.time}</div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 font-bold">${l.count}</span>
+                        </div>
+                    `).join('');
+            }
+            document.getElementById('history-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function getClassOptionsHtml(selectedValue = '') {
             if (appState.classes.length === 0) {
                 return `<option value="">-- Tambahkan Kelas Terlebih Dahulu di Menu Kelas --</option>`;
+            }
+            const classNames = appState.classes.map(c => c.name);
+            if (selectedValue && !classNames.includes(selectedValue)) {
+                classNames.unshift(selectedValue);
             }
             return classNames.map(cName => `<option value="${cName}" ${cName === selectedValue ? 'selected' : ''}>${cName}</option>`).join('');
         }
