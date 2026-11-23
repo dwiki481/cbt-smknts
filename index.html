@@ -315,6 +315,28 @@
         </div>
     </div>
 
+    <!-- Modal: Konfirmasi Hapus Jadwal Ujian -->
+    <div id="delete-exam-modal" class="fixed inset-0 z-[96] hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 p-6 text-center">
+            <div class="mx-auto mb-4 w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                <i data-lucide="trash-2" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 mb-1.5">Hapus Jadwal Ujian?</h3>
+            <p id="delete-exam-desc" class="text-xs sm:text-sm text-slate-500 leading-relaxed mb-6">
+                Jadwal ujian ini akan dihapus permanen dari database Supabase.
+            </p>
+            <input type="hidden" id="delete-exam-target-id">
+            <div class="flex items-center justify-center gap-2.5">
+                <button type="button" onclick="closeDeleteExamModal()" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold transition">
+                    Batal
+                </button>
+                <button type="button" onclick="confirmDeleteExam()" class="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition">
+                    Ya, Hapus Jadwal
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // =========================================================================
         // 0. KONFIGURASI SUPABASE (TERHUBUNG KE PROYEK ANDA)
@@ -1125,6 +1147,54 @@
             exam.status = 'Berlangsung';
             syncExamToSupabase(exam);
             showToast(`Ujian ${exam.subject} dibuka (Berlangsung)`, 'success');
+            renderApp();
+        }
+
+        function openDeleteExamModal(examId) {
+            const exam = appState.exams.find(e => e.id === examId);
+            if (!exam) return;
+            document.getElementById('delete-exam-target-id').value = exam.id;
+            document.getElementById('delete-exam-desc').innerHTML = `
+                Apakah Anda yakin ingin menghapus jadwal ujian <strong>${exam.subject}</strong> (${exam.className}) secara permanen dari Supabase?
+            `;
+            document.getElementById('delete-exam-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeDeleteExamModal() {
+            document.getElementById('delete-exam-modal').classList.add('hidden');
+        }
+
+        async function confirmDeleteExam() {
+            const examId = document.getElementById('delete-exam-target-id').value;
+            const exam = appState.exams.find(e => e.id === examId);
+            if (!exam) {
+                closeDeleteExamModal();
+                return;
+            }
+
+            const subjectName = exam.subject;
+            appState.exams = appState.exams.filter(e => e.id !== examId);
+
+            if (appState.selectedMonitoringExamId === examId) {
+                appState.selectedMonitoringExamId = appState.exams.length > 0 ? appState.exams[0].id : '';
+            }
+
+            appState.participants.forEach(p => {
+                if (p.examId === examId) {
+                    p.examId = null;
+                }
+            });
+
+            if (supabaseClient) {
+                const { error } = await supabaseClient.from('exams').delete().eq('id', examId);
+                if (error) {
+                    showToast('Gagal menghapus jadwal di Supabase: ' + error.message, 'danger');
+                }
+            }
+
+            closeDeleteExamModal();
+            showToast(`Jadwal ujian "${subjectName}" berhasil dihapus`, 'info');
             renderApp();
         }
 
@@ -2186,15 +2256,21 @@
                                                     <span>Buka Ujian</span>
                                                 </button>
                                             ` : `
-                                                <button onclick="endExamSession('${ex.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 text-xs font-semibold transition">
-                                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                                <button onclick="endExamSession('${ex.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/70 text-xs font-semibold transition">
+                                                    <i data-lucide="square" class="w-3.5 h-3.5"></i>
                                                     <span>Akhiri Ujian</span>
                                                 </button>
                                             `}
-                                            <button onclick="openScheduleModal('${ex.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-slate-700 text-xs font-semibold transition ml-auto">
-                                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
-                                                <span>Edit Jadwal / Token / GForm</span>
-                                            </button>
+                                            <div class="inline-flex items-center gap-2 ml-auto">
+                                                <button onclick="openScheduleModal('${ex.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-slate-700 text-xs font-semibold transition">
+                                                    <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                                                    <span>Edit Jadwal</span>
+                                                </button>
+                                                <button onclick="openDeleteExamModal('${ex.id}')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200/70 text-xs font-semibold transition" title="Hapus Jadwal Ujian">
+                                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                                    <span>Hapus</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 `;
