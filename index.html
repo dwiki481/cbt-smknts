@@ -58,6 +58,32 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #94A3B8;
         }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #print-cards-area, #print-cards-area * {
+                visibility: visible;
+            }
+            #print-cards-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .login-card-item {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                border: 1.5px solid #334155 !important;
+                box-shadow: none !important;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-700">
@@ -246,36 +272,6 @@
         </div>
     </div>
 
-    <!-- Modal: Edit Kelas -->
-    <div id="edit-class-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 id="edit-class-modal-title" class="font-bold text-lg text-slate-800">Edit Data Kelas</h3>
-                <button type="button" onclick="closeEditClassModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <form onsubmit="saveEditClassForm(event)" class="p-6 space-y-4">
-                <input type="hidden" id="edit-class-id">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nama Kelas</label>
-                    <input type="text" id="edit-class-name" required placeholder="Contoh: Kelas X-A" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tingkat / Jurusan (Opsional)</label>
-                    <input type="text" id="edit-class-grade" placeholder="Contoh: Kelas X / IPA" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
-                </div>
-                <p class="text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
-                    Jika nama kelas diubah, data kelas pada akun siswa dan jadwal ujian terkait akan otomatis diperbarui.
-                </p>
-                <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
-                    <button type="button" onclick="closeEditClassModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition">Simpan Perubahan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Modal: Tambah / Edit Peserta Ujian (Siswa) -->
     <div id="participant-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
@@ -399,6 +395,87 @@
                 <button type="button" onclick="confirmDeleteExam()" class="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition">
                     Ya, Hapus Jadwal
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Kelas -->
+    <div id="edit-class-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 id="edit-class-modal-title" class="font-bold text-lg text-slate-800">Edit Data Kelas</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Perubahan nama kelas akan otomatis diperbarui pada data siswa & jadwal ujian terkait.</p>
+                </div>
+                <button type="button" onclick="closeEditClassModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="saveEditClassForm(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit-class-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nama Kelas</label>
+                    <input type="text" id="edit-class-name" required placeholder="Contoh: Kelas X-A" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tingkat / Jurusan (Opsional)</label>
+                    <input type="text" id="edit-class-grade" placeholder="Contoh: Kelas X / IPA" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div class="pt-3 flex items-center justify-end gap-2.5 border-t border-slate-100">
+                    <button type="button" onclick="closeEditClassModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Cetak Kartu Login Siswa -->
+    <div id="print-cards-modal" class="fixed inset-0 z-[96] hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+        <div class="bg-white w-full max-w-5xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh]">
+            <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/70 no-print">
+                <div>
+                    <h3 class="font-bold text-base sm:text-lg text-slate-900 flex items-center gap-2">
+                        <i data-lucide="printer" class="w-5 h-5 text-indigo-600"></i>
+                        <span>Cetak Kartu Login Peserta Ujian</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Filter berdasarkan kelas atau ruang, lalu klik Cetak / Simpan PDF.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        <span>Cetak / Simpan PDF</span>
+                    </button>
+                    <button type="button" onclick="closePrintCardsModal()" class="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200/70 transition">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="px-6 py-3 border-b border-slate-100 bg-white flex flex-wrap items-center gap-3 no-print">
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-semibold text-slate-600">Kelas:</label>
+                    <select id="print-filter-class" onchange="renderPrintCardsPreview()" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-slate-50 focus:outline-none focus:border-indigo-500">
+                        <option value="ALL">Semua Kelas</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-semibold text-slate-600">Ruang:</label>
+                    <select id="print-filter-room" onchange="renderPrintCardsPreview()" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-slate-50 focus:outline-none focus:border-indigo-500">
+                        <option value="ALL">Semua Ruang</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 flex-1 min-w-[180px]">
+                    <input type="text" id="print-filter-search" oninput="renderPrintCardsPreview()" placeholder="Cari nama atau NISN siswa..." class="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-indigo-500">
+                </div>
+                <div id="print-cards-count" class="text-xs font-bold text-indigo-600 ml-auto">0 Kartu</div>
+            </div>
+
+            <!-- Area Kartu yang Akan Dicetak -->
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-100/70">
+                <div id="print-cards-area" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
+                    <!-- Kartu di-render via JS -->
+                </div>
             </div>
         </div>
     </div>
@@ -1384,10 +1461,10 @@
         function openEditClassModal(classId) {
             const cls = appState.classes.find(c => c.id === classId);
             if (!cls) return;
-            document.getElementById('edit-class-modal-title').textContent = `Edit Kelas — ${cls.name}`;
             document.getElementById('edit-class-id').value = cls.id;
             document.getElementById('edit-class-name').value = cls.name;
             document.getElementById('edit-class-grade').value = cls.gradeLevel || '';
+            document.getElementById('edit-class-modal-title').textContent = `Edit Kelas — ${cls.name}`;
             document.getElementById('edit-class-modal').classList.remove('hidden');
             lucide.createIcons();
             setTimeout(() => document.getElementById('edit-class-name').focus(), 100);
@@ -1397,7 +1474,7 @@
             document.getElementById('edit-class-modal').classList.add('hidden');
         }
 
-        function saveEditClassForm(e) {
+        async function saveEditClassForm(e) {
             e.preventDefault();
             const classId = document.getElementById('edit-class-id').value;
             const newName = document.getElementById('edit-class-name').value.trim();
@@ -1411,49 +1488,37 @@
             const cls = appState.classes.find(c => c.id === classId);
             if (!cls) return;
 
-            const isDuplicate = appState.classes.some(
-                c => c.id !== classId && c.name.toLowerCase() === newName.toLowerCase()
-            );
-            if (isDuplicate) {
-                showToast(`Nama kelas "${newName}" sudah terdaftar!`, 'warning');
+            if (appState.classes.some(c => c.id !== classId && c.name.toLowerCase() === newName.toLowerCase())) {
+                showToast('Nama kelas tersebut sudah terdaftar!', 'warning');
                 return;
             }
 
             const oldName = cls.name;
             cls.name = newName;
             cls.gradeLevel = newGrade;
-            syncClassToSupabase(cls);
+            await syncClassToSupabase(cls);
 
-            if (oldName !== newName) {
-                const oldLower = oldName.trim().toLowerCase();
-
-                appState.participants.forEach(p => {
-                    if (p.className && p.className.trim().toLowerCase() === oldLower) {
+            if (oldName.toLowerCase() !== newName.toLowerCase()) {
+                for (const p of appState.participants) {
+                    if (p.className && p.className.toLowerCase() === oldName.toLowerCase()) {
                         p.className = newName;
-                        syncParticipantToSupabase(p);
+                        await syncParticipantToSupabase(p);
                     }
-                });
-
-                appState.exams.forEach(ex => {
-                    const classArr = parseExamClasses(ex.className);
-                    let updated = false;
-                    const updatedArr = classArr.map(c => {
-                        if (c.trim().toLowerCase() === oldLower) {
-                            updated = true;
-                            return newName;
-                        }
-                        return c;
-                    });
-                    if (updated) {
-                        ex.className = updatedArr.join(', ');
-                        syncExamToSupabase(ex);
+                }
+                for (const ex of appState.exams) {
+                    const classesArr = parseExamClasses(ex.className);
+                    if (classesArr.some(c => c.toLowerCase() === oldName.toLowerCase())) {
+                        ex.className = classesArr
+                            .map(c => (c.toLowerCase() === oldName.toLowerCase() ? newName : c))
+                            .join(', ');
+                        await syncExamToSupabase(ex);
                     }
-                });
+                }
             }
 
             closeEditClassModal();
             renderApp();
-            showToast(`Data kelas "${newName}" berhasil diperbarui!`, 'success');
+            showToast(`Kelas "${newName}" berhasil diperbarui!`, 'success');
         }
 
         function getClassCheckboxesHtml(selectedClassesStr = '') {
@@ -1781,6 +1846,131 @@
 
             document.getElementById('participant-modal').classList.add('hidden');
             renderApp();
+        }
+
+        let singlePrintStudentId = null;
+
+        function openPrintCardsModal(studentId = null) {
+            singlePrintStudentId = studentId;
+            const modal = document.getElementById('print-cards-modal');
+            const classSelect = document.getElementById('print-filter-class');
+            const roomSelect = document.getElementById('print-filter-room');
+            const searchInput = document.getElementById('print-filter-search');
+
+            const uniqueClasses = [...new Set(appState.participants.map(p => p.className).filter(Boolean))].sort();
+            const uniqueRooms = [...new Set(appState.participants.map(p => p.room).filter(Boolean))].sort();
+
+            classSelect.innerHTML = `<option value="ALL">Semua Kelas (${appState.participants.length})</option>` +
+                uniqueClasses.map(c => `<option value="${c}">${c}</option>`).join('');
+            roomSelect.innerHTML = `<option value="ALL">Semua Ruang</option>` +
+                uniqueRooms.map(r => `<option value="${r}">${r}</option>`).join('');
+            searchInput.value = '';
+
+            if (studentId) {
+                const target = appState.participants.find(p => p.id === studentId);
+                if (target) {
+                    searchInput.value = target.username;
+                }
+            } else if (appState.studentListFilter && appState.studentListFilter.className !== 'ALL') {
+                classSelect.value = appState.studentListFilter.className;
+            }
+
+            modal.classList.remove('hidden');
+            renderPrintCardsPreview();
+            lucide.createIcons();
+        }
+
+        function closePrintCardsModal() {
+            singlePrintStudentId = null;
+            document.getElementById('print-cards-modal').classList.add('hidden');
+        }
+
+        function renderPrintCardsPreview() {
+            const area = document.getElementById('print-cards-area');
+            const countEl = document.getElementById('print-cards-count');
+            const classVal = document.getElementById('print-filter-class').value;
+            const roomVal = document.getElementById('print-filter-room').value;
+            const searchVal = document.getElementById('print-filter-search').value.trim().toLowerCase();
+
+            let list = appState.participants;
+            if (singlePrintStudentId && searchVal) {
+                list = list.filter(p => p.id === singlePrintStudentId || p.username.toLowerCase().includes(searchVal) || p.name.toLowerCase().includes(searchVal));
+            } else {
+                list = list.filter(p => {
+                    const matchClass = classVal === 'ALL' || p.className === classVal;
+                    const matchRoom = roomVal === 'ALL' || p.room === roomVal;
+                    const matchSearch = !searchVal || p.name.toLowerCase().includes(searchVal) || p.username.toLowerCase().includes(searchVal);
+                    return matchClass && matchRoom && matchSearch;
+                });
+            }
+
+            countEl.textContent = `${list.length} Kartu Siap Cetak`;
+
+            if (list.length === 0) {
+                area.innerHTML = `<div class="col-span-full py-12 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">Tidak ada data siswa yang sesuai filter untuk dicetak.</div>`;
+                return;
+            }
+
+            const schoolName = appState.settings.schoolName || 'Portal Sekolah';
+            const portalTitle = appState.settings.portalTitle || 'Kartu Peserta Ujian';
+            const academicYear = appState.settings.academicYear || '2026/2027';
+            const logoUrl = appState.settings.schoolLogo;
+            const portalUrl = window.location.origin + window.location.pathname;
+
+            area.innerHTML = list.map((p, idx) => `
+                <div class="login-card-item bg-white rounded-xl border-2 border-slate-300 p-4 shadow-2xs flex flex-col justify-between text-slate-800">
+                    <div>
+                        <!-- Kop Kartu -->
+                        <div class="flex items-center gap-3 pb-2.5 mb-3 border-b-2 border-slate-800">
+                            ${logoUrl
+                                ? `<img src="${logoUrl}" alt="Logo" class="w-10 h-10 object-contain shrink-0">`
+                                : `<div class="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-extrabold text-sm shrink-0">CBT</div>`
+                            }
+                            <div class="leading-tight">
+                                <div class="text-[11px] font-extrabold uppercase tracking-wide text-slate-900">${schoolName}</div>
+                                <div class="text-xs font-bold text-indigo-700 uppercase">${portalTitle}</div>
+                                <div class="text-[10px] text-slate-500">Tahun Pelajaran ${academicYear}</div>
+                            </div>
+                        </div>
+
+                        <!-- Identitas Siswa -->
+                        <table class="w-full text-xs mb-3">
+                            <tbody>
+                                <tr>
+                                    <td class="py-0.5 text-slate-500 w-24">No. Peserta</td>
+                                    <td class="py-0.5 font-semibold text-slate-800">: ${String(idx + 1).padStart(3, '0')} / ${p.username}</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 text-slate-500">Nama Siswa</td>
+                                    <td class="py-0.5 font-bold text-slate-900 uppercase">: ${p.name}</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-0.5 text-slate-500">Kelas / Ruang</td>
+                                    <td class="py-0.5 font-semibold text-slate-800">: ${p.className} • ${p.room || 'Ruang 1'}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- Kotak Kredensial Login -->
+                        <div class="grid grid-cols-2 gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-300 text-center">
+                            <div class="border-r border-slate-300 pr-2">
+                                <div class="text-[9px] font-bold uppercase tracking-wider text-slate-400">USERNAME</div>
+                                <div class="font-mono text-sm font-extrabold text-slate-900 mt-0.5">${p.username}</div>
+                            </div>
+                            <div class="pl-1">
+                                <div class="text-[9px] font-bold uppercase tracking-wider text-slate-400">PASSWORD</div>
+                                <div class="font-mono text-sm font-extrabold text-indigo-700 mt-0.5">${p.password || '123456'}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer Kartu -->
+                    <div class="mt-3 pt-2 border-t border-dashed border-slate-300 flex items-center justify-between text-[9px] text-slate-500">
+                        <span class="truncate max-w-[65%]">Akses: ${portalUrl}</span>
+                        <span class="font-semibold text-slate-700">Panitia Ujian</span>
+                    </div>
+                </div>
+            `).join('');
         }
 
         function removeParticipant(participantId) {
@@ -2195,9 +2385,10 @@
                                             </button>
                                         </div>
                                     </div>
-                                    <button type="submit" class="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 hover:from-indigo-700 hover:via-indigo-600 hover:to-violet-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] mt-2">
+                                    <button type="submit" class="group w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 hover:from-indigo-700 hover:via-indigo-700 hover:to-violet-700 text-white font-bold text-sm tracking-wide shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/40 ring-1 ring-indigo-500/50 flex items-center justify-center gap-2.5 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] mt-3">
+                                        <i data-lucide="log-in" class="w-4 h-4 opacity-90"></i>
                                         <span>Masuk ke Portal Ujian</span>
-                                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                        <i data-lucide="arrow-right" class="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1"></i>
                                     </button>
                                 </form>
                                 <p class="text-[11px] text-center text-slate-400 mt-5 leading-relaxed">
@@ -2218,9 +2409,10 @@
                                             </button>
                                         </div>
                                     </div>
-                                    <button type="submit" class="w-full py-3.5 px-5 rounded-xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-800 hover:from-slate-800 hover:via-indigo-900 hover:to-indigo-700 text-white font-semibold text-sm shadow-lg shadow-slate-900/20 flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] mt-2">
+                                    <button type="submit" class="group w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 hover:from-indigo-700 hover:via-indigo-600 hover:to-violet-600 text-white font-bold text-sm tracking-wide shadow-lg shadow-slate-900/20 hover:shadow-xl hover:shadow-indigo-500/30 ring-1 ring-slate-800/40 flex items-center justify-center gap-2.5 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] mt-3">
+                                        <i data-lucide="shield-check" class="w-4 h-4 opacity-90"></i>
                                         <span>Masuk ke Dashboard Staf</span>
-                                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                        <i data-lucide="arrow-right" class="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1"></i>
                                     </button>
                                 </form>
                             `}
@@ -2485,6 +2677,10 @@
                                     <i data-lucide="users" class="w-4 h-4"></i>
                                     <span>Data Siswa</span>
                                 </button>
+                                <button type="button" onclick="openPrintCardsModal()" class="py-3.5 border-b-2 border-transparent text-xs sm:text-sm font-semibold flex items-center gap-2 whitespace-nowrap text-slate-500 hover:text-indigo-600 transition">
+                                    <i data-lucide="id-card" class="w-4 h-4"></i>
+                                    <span>Cetak Kartu Login</span>
+                                </button>
                             ` : ''}
                             <button type="button" onclick="switchProctorTab('jadwal')" class="py-3.5 border-b-2 text-xs sm:text-sm font-semibold flex items-center gap-2 whitespace-nowrap transition ${tab === 'jadwal' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-800'}">
                                 <i data-lucide="calendar" class="w-4 h-4"></i>
@@ -2681,6 +2877,10 @@
                             <p class="text-xs sm:text-sm text-slate-500 mt-1">Kelola username, password, dan penempatan kelas siswa untuk login ke portal ujian.</p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="openPrintCardsModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold shadow-sm transition">
+                                <i data-lucide="printer" class="w-4 h-4"></i>
+                                <span>Cetak Kartu Login</span>
+                            </button>
                             <button type="button" onclick="openImportExcelModal()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition">
                                 <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
                                 <span>Import Excel (.xlsx)</span>
@@ -2730,6 +2930,7 @@
                                             <td class="py-3.5 px-5 text-xs text-slate-600">${p.className} • ${p.room}</td>
                                             <td class="py-3.5 px-5 text-right">
                                                 <div class="inline-flex items-center gap-1.5">
+                                                    <button type="button" onclick="openPrintCardsModal('${p.id}')" class="px-2.5 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition" title="Cetak Kartu Siswa Ini">Kartu</button>
                                                     <button type="button" onclick="openAddParticipantModal('${p.id}')" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition">Edit</button>
                                                     <button type="button" onclick="removeParticipant('${p.id}')" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition">Hapus</button>
                                                 </div>
