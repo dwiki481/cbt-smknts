@@ -246,6 +246,36 @@
         </div>
     </div>
 
+    <!-- Modal: Edit Kelas -->
+    <div id="edit-class-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h3 id="edit-class-modal-title" class="font-bold text-lg text-slate-800">Edit Data Kelas</h3>
+                <button type="button" onclick="closeEditClassModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form onsubmit="saveEditClassForm(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit-class-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nama Kelas</label>
+                    <input type="text" id="edit-class-name" required placeholder="Contoh: Kelas X-A" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tingkat / Jurusan (Opsional)</label>
+                    <input type="text" id="edit-class-grade" placeholder="Contoh: Kelas X / IPA" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                </div>
+                <p class="text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100 leading-relaxed">
+                    Jika nama kelas diubah, data kelas pada akun siswa dan jadwal ujian terkait akan otomatis diperbarui.
+                </p>
+                <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
+                    <button type="button" onclick="closeEditClassModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
+                    <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal: Tambah / Edit Peserta Ujian (Siswa) -->
     <div id="participant-modal" class="fixed inset-0 z-[95] hidden bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
@@ -1349,6 +1379,81 @@
             deleteClassFromSupabase(classId);
             renderApp();
             showToast(`Kelas "${cls.name}" dihapus.`, 'info');
+        }
+
+        function openEditClassModal(classId) {
+            const cls = appState.classes.find(c => c.id === classId);
+            if (!cls) return;
+            document.getElementById('edit-class-modal-title').textContent = `Edit Kelas — ${cls.name}`;
+            document.getElementById('edit-class-id').value = cls.id;
+            document.getElementById('edit-class-name').value = cls.name;
+            document.getElementById('edit-class-grade').value = cls.gradeLevel || '';
+            document.getElementById('edit-class-modal').classList.remove('hidden');
+            lucide.createIcons();
+            setTimeout(() => document.getElementById('edit-class-name').focus(), 100);
+        }
+
+        function closeEditClassModal() {
+            document.getElementById('edit-class-modal').classList.add('hidden');
+        }
+
+        function saveEditClassForm(e) {
+            e.preventDefault();
+            const classId = document.getElementById('edit-class-id').value;
+            const newName = document.getElementById('edit-class-name').value.trim();
+            const newGrade = document.getElementById('edit-class-grade').value.trim();
+
+            if (!newName) {
+                showToast('Nama kelas tidak boleh kosong!', 'warning');
+                return;
+            }
+
+            const cls = appState.classes.find(c => c.id === classId);
+            if (!cls) return;
+
+            const isDuplicate = appState.classes.some(
+                c => c.id !== classId && c.name.toLowerCase() === newName.toLowerCase()
+            );
+            if (isDuplicate) {
+                showToast(`Nama kelas "${newName}" sudah terdaftar!`, 'warning');
+                return;
+            }
+
+            const oldName = cls.name;
+            cls.name = newName;
+            cls.gradeLevel = newGrade;
+            syncClassToSupabase(cls);
+
+            if (oldName !== newName) {
+                const oldLower = oldName.trim().toLowerCase();
+
+                appState.participants.forEach(p => {
+                    if (p.className && p.className.trim().toLowerCase() === oldLower) {
+                        p.className = newName;
+                        syncParticipantToSupabase(p);
+                    }
+                });
+
+                appState.exams.forEach(ex => {
+                    const classArr = parseExamClasses(ex.className);
+                    let updated = false;
+                    const updatedArr = classArr.map(c => {
+                        if (c.trim().toLowerCase() === oldLower) {
+                            updated = true;
+                            return newName;
+                        }
+                        return c;
+                    });
+                    if (updated) {
+                        ex.className = updatedArr.join(', ');
+                        syncExamToSupabase(ex);
+                    }
+                });
+            }
+
+            closeEditClassModal();
+            renderApp();
+            showToast(`Data kelas "${newName}" berhasil diperbarui!`, 'success');
         }
 
         function getClassCheckboxesHtml(selectedClassesStr = '') {
@@ -2505,7 +2610,10 @@
                                                 <td class="py-3.5 px-5 text-slate-500 text-xs">${cls.gradeLevel || '-'}</td>
                                                 <td class="py-3.5 px-5 text-xs font-semibold text-indigo-600">${studentCount} Siswa</td>
                                                 <td class="py-3.5 px-5 text-right">
-                                                    <button type="button" onclick="removeClass('${cls.id}')" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition">Hapus</button>
+                                                    <div class="inline-flex items-center gap-1.5">
+                                                        <button type="button" onclick="openEditClassModal('${cls.id}')" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition">Edit</button>
+                                                        <button type="button" onclick="removeClass('${cls.id}')" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition">Hapus</button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         `;
