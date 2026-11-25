@@ -289,7 +289,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">Username / NISN</label>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">USERNAME</label>
                         <input type="text" id="p-input-username" required placeholder="Contoh: 0081234567" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
@@ -1259,7 +1259,7 @@
             );
 
             if (!student) {
-                showToast('Username / NISN tidak terdaftar. Hubungi Admin ujian.', 'danger');
+                showToast('USERNAME tidak terdaftar. Hubungi Admin ujian.', 'danger');
                 return;
             }
 
@@ -1818,7 +1818,7 @@
                 showToast(`Data siswa ${name} berhasil diperbarui!`, 'success');
             } else {
                 if (appState.participants.some(p => p.username.toLowerCase() === username.toLowerCase())) {
-                    showToast('Username / NISN sudah terdaftar!', 'warning');
+                    showToast('USERNAME sudah terdaftar!', 'warning');
                     return;
                 }
                 const newP = {
@@ -2373,7 +2373,7 @@
                             ${isSiswa ? `
                                 <form onsubmit="handleStudentLogin(event)" class="space-y-4">
                                     <div>
-                                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Username / NISN</label>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">USERNAME</label>
                                         <input type="text" id="student-username" required autocomplete="off" placeholder="Masukkan username atau NISN" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 transition">
                                     </div>
                                     <div>
@@ -2912,7 +2912,7 @@
                                     <tr class="border-b border-slate-100 bg-slate-50/70 text-[11px] font-bold uppercase tracking-wider text-slate-400">
                                         <th class="py-3.5 px-5 w-12">NO</th>
                                         <th class="py-3.5 px-5">NAMA LENGKAP</th>
-                                        <th class="py-3.5 px-5">USERNAME / NISN</th>
+                                        <th class="py-3.5 px-5">USERNAME</th>
                                         <th class="py-3.5 px-5">PASSWORD</th>
                                         <th class="py-3.5 px-5">KELAS & RUANG</th>
                                         <th class="py-3.5 px-5 text-right">AKSI</th>
