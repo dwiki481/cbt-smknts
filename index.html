@@ -385,7 +385,7 @@
             </div>
             <h3 class="text-lg font-bold text-slate-900 mb-1.5">Hapus Jadwal Ujian?</h3>
             <p id="delete-exam-desc" class="text-xs sm:text-sm text-slate-500 leading-relaxed mb-6">
-                Jadwal ujian ini akan dihapus permanen dari database Supabase.
+                Jadwal ujian ini akan dihapus permanen. Data akun siswa tetap aman dan tidak akan ikut terhapus.
             </p>
             <input type="hidden" id="delete-exam-target-id">
             <div class="flex items-center justify-center gap-2.5">
@@ -659,9 +659,33 @@
         }
 
         async function deleteExamFromSupabase(examId) {
-            if (!supabaseClient || !examId) return;
+            if (!supabaseClient || !examId) return false;
+
+            // Lepaskan relasi exam_id pada tabel participants terlebih dahulu
+            // agar aturan ON DELETE CASCADE di database tidak ikut menghapus data akun siswa
+            const { error: detachError } = await supabaseClient
+                .from('participants')
+                .update({
+                    exam_id: null,
+                    status: 'Belum Masuk',
+                    violations: 0,
+                    last_violation_reason: '',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('exam_id', examId);
+
+            if (detachError) {
+                showToast('Gagal melepaskan relasi peserta dari jadwal: ' + detachError.message, 'danger');
+                return false;
+            }
+
+            // Hapus jadwal ujian dari tabel exams setelah relasi siswa dilepas
             const { error } = await supabaseClient.from('exams').delete().eq('id', examId);
-            if (error) showToast('Gagal menghapus jadwal ujian: ' + error.message, 'danger');
+            if (error) {
+                showToast('Gagal menghapus jadwal ujian: ' + error.message, 'danger');
+                return false;
+            }
+            return true;
         }
 
         async function syncExamToSupabase(exam) {
@@ -1668,7 +1692,7 @@
             if (!exam) return;
             document.getElementById('delete-exam-target-id').value = exam.id;
             document.getElementById('delete-exam-desc').innerHTML = `
-                Anda yakin ingin menghapus jadwal ujian <strong>${exam.subject}</strong> (${exam.className}) secara permanen?
+                Anda yakin ingin menghapus jadwal ujian <strong>${exam.subject}</strong> (${exam.className}) secara permanen? Data akun siswa tetap aman dan tidak akan ikut terhapus.
             `;
             document.getElementById('delete-exam-modal').classList.remove('hidden');
             lucide.createIcons();
@@ -1678,21 +1702,35 @@
             document.getElementById('delete-exam-modal').classList.add('hidden');
         }
 
-        function confirmDeleteExam() {
+        async function confirmDeleteExam() {
             const examId = document.getElementById('delete-exam-target-id').value;
             const exam = appState.exams.find(e => e.id === examId);
             if (!exam) {
                 closeDeleteExamModal();
                 return;
             }
+
+            const isDeleted = await deleteExamFromSupabase(examId);
+            if (!isDeleted) return;
+
+            // Perbarui state lokal siswa agar relasi examId terlepas tanpa menghapus akun siswa
+            appState.participants.forEach(p => {
+                if (p.examId === examId) {
+                    p.examId = null;
+                    p.status = 'Belum Masuk';
+                    p.violations = 0;
+                    p.lastViolationReason = '';
+                }
+            });
+
             appState.exams = appState.exams.filter(e => e.id !== examId);
             if (appState.selectedMonitoringExamId === examId) {
                 appState.selectedMonitoringExamId = appState.exams.length > 0 ? appState.exams[0].id : '';
             }
-            deleteExamFromSupabase(examId);
+
             closeDeleteExamModal();
             renderApp();
-            showToast(`Jadwal ujian "${exam.subject}" berhasil dihapus.`, 'info');
+            showToast(`Jadwal ujian "${exam.subject}" berhasil dihapus. Data akun siswa tetap aman.`, 'info');
         }
 
         function updateManualExamToken(examId, newToken) {
