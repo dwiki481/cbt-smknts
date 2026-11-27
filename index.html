@@ -10,8 +10,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    
-    <!-- Supabase JS SDK v2 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
@@ -130,7 +128,7 @@
                 </div>
                 <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
                     <button type="button" onclick="closeTokenModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
-                    <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition">Mulai Ujian</button>
+                    <button type="submit" id="btn-submit-token" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition">Mulai Ujian</button>
                 </div>
             </form>
         </div>
@@ -438,7 +436,7 @@
 
     <script>
         // =========================================================================
-        // 1. KONFIGURASI SUPABASE (GANTI DENGAN URL & ANON KEY PROYEK ANDA)
+        // 1. KONFIGURASI SUPABASE
         // =========================================================================
         const SUPABASE_URL = "https://mvafpjvoktzropiespws.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12YWZwanZva3R6cm9waWVzcHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU3Nzg1NTgsImV4cCI6MjExMTM1NDU1OH0.9WGU1jvwjhJamuaGYsfL3pshKDJnTuRZ9WqpEG1gBDI";
@@ -448,8 +446,8 @@
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
 
-        const SESSION_KEY = 'portal_ujian_session_supabase_v1';
-        const LOCAL_SETTINGS_KEY = 'portal_ujian_settings_supabase_v1';
+        const SESSION_KEY = 'portal_ujian_session_supabase_v2';
+        const LOCAL_SETTINGS_KEY = 'portal_ujian_settings_supabase_v2';
 
         let session = {
             view: 'login',
@@ -475,10 +473,7 @@
                 schoolLogo: ''
             },
             classes: [],
-            staffUsers: [
-                { id: 'staff-1', name: 'Administrator', username: 'admin', password: '123', role: 'admin' },
-                { id: 'staff-2', name: 'Pengawas Ruang 1', username: 'pengawas1', password: '123', role: 'pengawas' }
-            ],
+            staffUsers: [],
             exams: [],
             participants: []
         };
@@ -509,8 +504,33 @@
             return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
         }
 
+        function isAnyModalOpen() {
+            const modalIds = [
+                'token-modal', 'violation-modal', 'schedule-modal',
+                'participant-modal', 'import-excel-modal', 'history-modal',
+                'delete-exam-modal', 'edit-class-modal', 'print-cards-modal',
+                'finish-exam-modal'
+            ];
+            return modalIds.some(id => {
+                const el = document.getElementById(id);
+                return el && !el.classList.contains('hidden');
+            });
+        }
+
+        // Render Debounce (jeda 450ms) agar klik tombol tidak pernah terputus saat ratusan siswa online
+        let renderDebounceTimer = null;
         function safeRenderApp(force = false) {
-            if (!force && isTypingInLoginForm()) return;
+            if (!force) {
+                if (isTypingInLoginForm() || isAnyModalOpen()) return;
+                clearTimeout(renderDebounceTimer);
+                renderDebounceTimer = setTimeout(() => {
+                    if (!isTypingInLoginForm() && !isAnyModalOpen()) {
+                        renderApp();
+                    }
+                }, 450);
+                return;
+            }
+            clearTimeout(renderDebounceTimer);
             renderApp();
         }
 
@@ -762,7 +782,7 @@
                 dateStr: row.date_str,
                 sessionStr: row.session_str,
                 status: row.status,
-                token: row.token,
+                token: row.token || '',
                 durationSeconds: row.duration_seconds,
                 maxViolations: row.max_violations,
                 gformUrl: row.gform_url || '',
@@ -806,7 +826,10 @@
 
         async function manualRefreshStudentSchedule() {
             if (!supabaseClient) return;
-            const { data, error } = await supabaseClient.from('exams').select('*').order('subject', { ascending: true });
+            const selectCols = session.view === 'proctor'
+                ? '*'
+                : 'id, subject, class_name, date_str, session_str, status, duration_seconds, max_violations';
+            const { data, error } = await supabaseClient.from('exams').select(selectCols).order('subject', { ascending: true });
             if (error) {
                 showToast('Gagal memuat ulang jadwal.', 'danger');
                 return;
@@ -815,6 +838,12 @@
             evaluateScheduledExamStatuses();
             renderApp();
             showToast('Jadwal ujian berhasil disegarkan.', 'success');
+        }
+
+        async function forceSyncFromCloud() {
+            showToast('Menyinkronkan data terbaru dari server...', 'info');
+            await loadInitialSupabaseData();
+            showToast('Data berhasil disinkronkan!', 'success');
         }
 
         // =========================================================================
@@ -843,14 +872,11 @@
                     document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
                 }
 
-                // 2. Staf / Admin
-                const { data: staffData } = await supabaseClient.from('staff_users').select('*');
-                if (staffData && staffData.length > 0) {
-                    appState.staffUsers = staffData;
-                }
-
-                // 3. Jadwal Ujian
-                const { data: examsData } = await supabaseClient.from('exams').select('*').order('subject', { ascending: true });
+                // 2. Jadwal Ujian (jika belum login staf, jangan tarik token & gform_url)
+                const examCols = session.view === 'proctor'
+                    ? '*'
+                    : 'id, subject, class_name, date_str, session_str, status, duration_seconds, max_violations';
+                const { data: examsData } = await supabaseClient.from('exams').select(examCols).order('subject', { ascending: true });
                 if (examsData) {
                     appState.exams = examsData.map(mapExamRow);
                     if (appState.exams.length > 0 && !appState.exams.some(e => e.id === appState.selectedMonitoringExamId)) {
@@ -859,7 +885,7 @@
                     evaluateScheduledExamStatuses();
                 }
 
-                // 4. Data Peserta sesuai peran
+                // 3. Data sesuai peran
                 await fetchParticipantsByRole();
             } catch (err) {
                 console.warn('Supabase init error:', err);
@@ -872,15 +898,23 @@
         async function fetchParticipantsByRole() {
             if (!supabaseClient) return;
             if (session.view === 'proctor') {
-                const [{ data: classesData }, { data: partData }] = await Promise.all([
+                const [{ data: classesData }, { data: partData }, { data: staffData }, { data: examsData }] = await Promise.all([
                     supabaseClient.from('classes').select('*').order('name', { ascending: true }),
-                    supabaseClient.from('participants').select('*').order('name', { ascending: true })
+                    supabaseClient.from('participants').select('*').order('name', { ascending: true }),
+                    supabaseClient.from('staff_users').select('*'),
+                    supabaseClient.from('exams').select('*').order('subject', { ascending: true })
                 ]);
                 if (classesData) {
                     appState.classes = classesData.map(c => ({ id: c.id, name: c.name, gradeLevel: c.grade_level || '' }));
                 }
                 if (partData) {
                     appState.participants = partData.map(mapParticipantRow);
+                }
+                if (staffData) {
+                    appState.staffUsers = staffData;
+                }
+                if (examsData) {
+                    appState.exams = examsData.map(mapExamRow);
                 }
             } else if (session.activeStudentId) {
                 const { data: singleData } = await supabaseClient.from('participants').select('*').eq('id', session.activeStudentId).maybeSingle();
@@ -918,9 +952,15 @@
                 })
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'exams' }, payload => {
                     if (payload.eventType === 'DELETE') {
-                        appState.exams = appState.exams.filter(e => e.id !== payload.old.id);
+                        if (payload.old && payload.old.id) {
+                            appState.exams = appState.exams.filter(e => e.id !== payload.old.id);
+                        }
                     } else if (payload.new) {
                         const mapped = mapExamRow(payload.new);
+                        if (session.view !== 'proctor') {
+                            mapped.token = '';
+                            mapped.gformUrl = '';
+                        }
                         const idx = appState.exams.findIndex(e => e.id === mapped.id);
                         if (idx >= 0) appState.exams[idx] = mapped;
                         else appState.exams.push(mapped);
@@ -931,7 +971,9 @@
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, payload => {
                     if (session.view !== 'proctor') return;
                     if (payload.eventType === 'DELETE') {
-                        appState.classes = appState.classes.filter(c => c.id !== payload.old.id);
+                        if (payload.old && payload.old.id) {
+                            appState.classes = appState.classes.filter(c => c.id !== payload.old.id);
+                        }
                     } else if (payload.new) {
                         const mapped = { id: payload.new.id, name: payload.new.name, gradeLevel: payload.new.grade_level || '' };
                         const idx = appState.classes.findIndex(c => c.id === mapped.id);
@@ -943,7 +985,9 @@
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, payload => {
                     if (session.view === 'proctor') {
                         if (payload.eventType === 'DELETE') {
-                            appState.participants = appState.participants.filter(p => p.id !== payload.old.id);
+                            if (payload.old && payload.old.id) {
+                                appState.participants = appState.participants.filter(p => p.id !== payload.old.id);
+                            }
                         } else if (payload.new) {
                             const mapped = mapParticipantRow(payload.new);
                             const idx = appState.participants.findIndex(p => p.id === mapped.id);
@@ -964,7 +1008,7 @@
         }
 
         function syncRoleBasedListeners() {
-            fetchParticipantsByRole().then(() => safeRenderApp());
+            fetchParticipantsByRole().then(() => safeRenderApp(true));
         }
 
         loadSessionState();
@@ -1334,51 +1378,57 @@
             e.preventDefault();
             const examId = document.getElementById('token-exam-id').value;
             const tokenInput = normalizeAlphanumericToken(document.getElementById('input-student-token').value);
+            const submitBtn = document.getElementById('btn-submit-token');
+            if (submitBtn) submitBtn.disabled = true;
 
-            let exam = appState.exams.find(ex => ex.id === examId);
-            if (supabaseClient) {
-                const freshExam = await fetchSingleExamById(examId);
-                if (freshExam) exam = freshExam;
-            }
+            try {
+                let exam = appState.exams.find(ex => ex.id === examId);
+                if (supabaseClient) {
+                    const freshExam = await fetchSingleExamById(examId);
+                    if (freshExam) exam = freshExam;
+                }
 
-            const student = appState.participants.find(p => p.id === session.activeStudentId);
-            if (!exam || !student) return;
+                const student = appState.participants.find(p => p.id === session.activeStudentId);
+                if (!exam || !student) return;
 
-            if (exam.status !== 'Berlangsung') {
+                if (exam.status !== 'Berlangsung') {
+                    closeTokenModal();
+                    showToast('Status ujian sudah ditutup.', 'danger');
+                    return;
+                }
+                if (student.status === 'Terkunci') {
+                    closeTokenModal();
+                    showToast('Akun ujian Anda terkunci. Hubungi pengawas ruang.', 'danger');
+                    return;
+                }
+                if (tokenInput !== normalizeAlphanumericToken(exam.token)) {
+                    showToast('Token Ujian tidak sesuai!', 'danger');
+                    return;
+                }
+
                 closeTokenModal();
-                showToast('Status ujian sudah ditutup.', 'danger');
-                return;
-            }
-            if (student.status === 'Terkunci') {
-                closeTokenModal();
-                showToast('Akun ujian Anda terkunci. Hubungi pengawas ruang.', 'danger');
-                return;
-            }
-            if (tokenInput !== normalizeAlphanumericToken(exam.token)) {
-                showToast('Token Ujian tidak sesuai!', 'danger');
-                return;
-            }
+                if (student.examId !== exam.id) {
+                    student.examId = exam.id;
+                    student.remainingSeconds = exam.durationSeconds;
+                    student.violations = 0;
+                    student.violationLogs = [];
+                    student.lastViolationReason = '';
+                }
+                student.maxViolations = exam.maxViolations || 3;
+                student.status = 'Mengerjakan';
+                student.lastActive = 'Baru saja';
+                await updateParticipantInSupabase(student);
 
-            closeTokenModal();
-            if (student.examId !== exam.id) {
-                student.examId = exam.id;
-                student.remainingSeconds = exam.durationSeconds;
-                student.violations = 0;
-                student.violationLogs = [];
-                student.lastViolationReason = '';
+                session.activeExamId = exam.id;
+                session.view = 'student_exam';
+                saveState();
+                checkStudentLockState();
+                renderApp();
+                requestExamFullscreen();
+                showToast(`Token valid! Memulai ujian ${exam.subject}.`, 'success');
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
             }
-            student.maxViolations = exam.maxViolations || 3;
-            student.status = 'Mengerjakan';
-            student.lastActive = 'Baru saja';
-            await updateParticipantInSupabase(student);
-
-            session.activeExamId = exam.id;
-            session.view = 'student_exam';
-            saveState();
-            checkStudentLockState();
-            renderApp();
-            requestExamFullscreen();
-            showToast(`Token valid! Memulai ujian ${exam.subject}.`, 'success');
         }
 
         function backToStudentDashboard() {
@@ -1396,13 +1446,13 @@
             session.view = 'login';
             session.activeStudentId = null;
             session.activeExamId = null;
+            appState.participants = [];
             saveState();
-            syncRoleBasedListeners();
             renderApp();
             showToast('Anda telah keluar dari portal siswa.', 'info');
         }
 
-        function handleStaffLogin(e) {
+        async function handleStaffLogin(e) {
             e.preventDefault();
             const username = document.getElementById('staff-username').value.trim();
             const password = document.getElementById('staff-password').value.trim();
@@ -1412,9 +1462,18 @@
                 return;
             }
 
-            const matchedStaff = appState.staffUsers.find(
-                u => u.username.toLowerCase() === username.toLowerCase() && u.password === password
-            );
+            let matchedStaff = null;
+            if (supabaseClient) {
+                const { data } = await supabaseClient
+                    .from('staff_users')
+                    .select('*')
+                    .ilike('username', username)
+                    .maybeSingle();
+
+                if (data && data.password === password) {
+                    matchedStaff = data;
+                }
+            }
 
             if (!matchedStaff) {
                 showToast('Username atau password staf tidak sesuai.', 'danger');
@@ -1449,8 +1508,10 @@
         function logoutProctor() {
             session.view = 'login';
             session.loginTab = 'staf';
+            appState.staffUsers = [];
+            appState.participants = [];
+            appState.classes = [];
             saveState();
-            syncRoleBasedListeners();
             renderApp();
             showToast('Anda telah keluar dari panel staf.', 'info');
         }
@@ -2203,90 +2264,95 @@
 
         async function processExcelImport() {
             if (parsedExcelRows.length === 0) return;
+            const btnSubmit = document.getElementById('btn-submit-excel');
+            if (btnSubmit) btnSubmit.disabled = true;
 
-            const newClassesToInsert = [];
-            const rowsToUpsert = [];
+            try {
+                const newClassesToInsert = [];
+                const rowsToUpsert = [];
 
-            for (let idx = 0; idx < parsedExcelRows.length; idx++) {
-                const row = parsedExcelRows[idx];
-                if (row.className && !appState.classes.some(c => normalizeClassKey(c.name) === normalizeClassKey(row.className))) {
-                    const newCls = { id: `kelas-${Date.now()}-${idx}`, name: row.className, gradeLevel: '' };
-                    appState.classes.push(newCls);
-                    newClassesToInsert.push({ id: newCls.id, name: newCls.name, grade_level: '' });
-                }
+                for (let idx = 0; idx < parsedExcelRows.length; idx++) {
+                    const row = parsedExcelRows[idx];
+                    if (row.className && !appState.classes.some(c => normalizeClassKey(c.name) === normalizeClassKey(row.className))) {
+                        const newCls = { id: `kelas-${Date.now()}-${idx}`, name: row.className, gradeLevel: '' };
+                        appState.classes.push(newCls);
+                        newClassesToInsert.push({ id: newCls.id, name: newCls.name, grade_level: '' });
+                    }
 
-                const existing = appState.participants.find(p => p.username.toLowerCase() === row.username.toLowerCase());
-                if (existing) {
-                    Object.assign(existing, { name: row.name, password: row.password, className: row.className, room: row.room });
-                    rowsToUpsert.push({
-                        id: existing.id,
-                        name: row.name,
-                        username: existing.username,
-                        username_lower: existing.username.toLowerCase(),
-                        password: row.password,
-                        email: existing.email || `${existing.username}@sekolah.sch.id`,
-                        class_name: row.className,
-                        room: row.room,
-                        exam_id: existing.examId || null,
-                        status: existing.status,
-                        violations: getEffectiveViolationCount(existing),
-                        max_violations: existing.maxViolations || 3,
-                        last_violation_reason: existing.lastViolationReason || '',
-                        violation_logs: existing.violationLogs || [],
-                        last_active: existing.lastActive || '-',
-                        remaining_seconds: existing.remainingSeconds || 5400,
-                        answers: existing.answers || {},
-                        updated_at: new Date().toISOString()
-                    });
-                } else {
-                    const newP = {
-                        id: `p-${Date.now()}-${idx}`, name: row.name, username: row.username,
-                        password: row.password, email: `${row.username}@sekolah.sch.id`,
-                        className: row.className, room: row.room, examId: null, status: 'Belum Masuk',
-                        violations: 0, maxViolations: 3, lastViolationReason: '', violationLogs: [],
-                        lastActive: '-', remainingSeconds: 5400, answers: {}
-                    };
-                    appState.participants.push(newP);
-                    rowsToUpsert.push({
-                        id: newP.id,
-                        name: newP.name,
-                        username: newP.username,
-                        username_lower: newP.username.toLowerCase(),
-                        password: newP.password,
-                        email: newP.email,
-                        class_name: newP.className,
-                        room: newP.room,
-                        exam_id: null,
-                        status: 'Belum Masuk',
-                        violations: 0,
-                        max_violations: 3,
-                        last_violation_reason: '',
-                        violation_logs: [],
-                        last_active: '-',
-                        remaining_seconds: 5400,
-                        answers: {},
-                        updated_at: new Date().toISOString()
-                    });
-                }
-            }
-
-            // Bulk upsert ke Supabase dalam 1 permintaan super cepat
-            if (supabaseClient) {
-                if (newClassesToInsert.length > 0) {
-                    await supabaseClient.from('classes').upsert(newClassesToInsert);
-                }
-                if (rowsToUpsert.length > 0) {
-                    const { error } = await supabaseClient.from('participants').upsert(rowsToUpsert, { onConflict: 'username' });
-                    if (error) {
-                        showToast('Gagal import ke Supabase: ' + error.message, 'danger');
-                        return;
+                    const existing = appState.participants.find(p => p.username.toLowerCase() === row.username.toLowerCase());
+                    if (existing) {
+                        Object.assign(existing, { name: row.name, password: row.password, className: row.className, room: row.room });
+                        rowsToUpsert.push({
+                            id: existing.id,
+                            name: row.name,
+                            username: existing.username,
+                            username_lower: existing.username.toLowerCase(),
+                            password: row.password,
+                            email: existing.email || `${existing.username}@sekolah.sch.id`,
+                            class_name: row.className,
+                            room: row.room,
+                            exam_id: existing.examId || null,
+                            status: existing.status,
+                            violations: getEffectiveViolationCount(existing),
+                            max_violations: existing.maxViolations || 3,
+                            last_violation_reason: existing.lastViolationReason || '',
+                            violation_logs: existing.violationLogs || [],
+                            last_active: existing.lastActive || '-',
+                            remaining_seconds: existing.remainingSeconds || 5400,
+                            answers: existing.answers || {},
+                            updated_at: new Date().toISOString()
+                        });
+                    } else {
+                        const newP = {
+                            id: `p-${Date.now()}-${idx}`, name: row.name, username: row.username,
+                            password: row.password, email: `${row.username}@sekolah.sch.id`,
+                            className: row.className, room: row.room, examId: null, status: 'Belum Masuk',
+                            violations: 0, maxViolations: 3, lastViolationReason: '', violationLogs: [],
+                            lastActive: '-', remainingSeconds: 5400, answers: {}
+                        };
+                        appState.participants.push(newP);
+                        rowsToUpsert.push({
+                            id: newP.id,
+                            name: newP.name,
+                            username: newP.username,
+                            username_lower: newP.username.toLowerCase(),
+                            password: newP.password,
+                            email: newP.email,
+                            class_name: newP.className,
+                            room: newP.room,
+                            exam_id: null,
+                            status: 'Belum Masuk',
+                            violations: 0,
+                            max_violations: 3,
+                            last_violation_reason: '',
+                            violation_logs: [],
+                            last_active: '-',
+                            remaining_seconds: 5400,
+                            answers: {},
+                            updated_at: new Date().toISOString()
+                        });
                     }
                 }
-            }
 
-            closeImportExcelModal();
-            renderApp();
-            showToast(`Berhasil mengimport ${parsedExcelRows.length} akun siswa ke Supabase!`, 'success');
+                if (supabaseClient) {
+                    if (newClassesToInsert.length > 0) {
+                        await supabaseClient.from('classes').upsert(newClassesToInsert, { onConflict: 'id' });
+                    }
+                    if (rowsToUpsert.length > 0) {
+                        const { error } = await supabaseClient.from('participants').upsert(rowsToUpsert, { onConflict: 'id' });
+                        if (error) {
+                            showToast('Gagal import ke Supabase: ' + error.message, 'danger');
+                            return;
+                        }
+                    }
+                }
+
+                closeImportExcelModal();
+                renderApp();
+                showToast(`Berhasil mengimport ${parsedExcelRows.length} akun siswa ke Supabase!`, 'success');
+            } finally {
+                if (btnSubmit) btnSubmit.disabled = false;
+            }
         }
 
         function openFinishExamModal() {
@@ -2593,6 +2659,10 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
+                            <button type="button" onclick="forceSyncFromCloud()" title="Muat ulang semua data terbaru dari Supabase" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 hover:bg-indigo-50 text-xs font-semibold text-indigo-600">
+                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                <span class="hidden sm:inline">Sinkronkan</span>
+                            </button>
                             <div class="hidden md:flex items-center bg-slate-100 p-0.5 rounded-lg text-[11px] font-semibold">
                                 <button type="button" onclick="switchProctorRole('pengawas')" class="px-2.5 py-1 rounded-md ${!isAdmin ? 'bg-white text-indigo-600 shadow-2xs' : 'text-slate-500'}">Mode Pengawas</button>
                                 <button type="button" onclick="switchProctorRole('admin')" class="px-2.5 py-1 rounded-md ${isAdmin ? 'bg-white text-indigo-600 shadow-2xs' : 'text-slate-500'}">Mode Admin</button>
