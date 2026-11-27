@@ -168,7 +168,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Token Ujian</label>
-                    <input type="text" id="input-student-token" required maxlength="5" autocomplete="off" placeholder="A1B2C" class="w-full px-4 py-3 rounded-xl border border-slate-200 font-mono text-center text-lg font-bold tracking-[0.25em] uppercase focus:outline-none focus:border-indigo-600">
+                    <input type="text" id="input-student-token" required maxlength="5" autocomplete="off" placeholder="XXXXX" class="w-full px-4 py-3 rounded-xl border border-slate-200 font-mono text-center text-lg font-bold tracking-[0.25em] uppercase focus:outline-none focus:border-indigo-600">
                 </div>
                 <div class="pt-2 flex items-center justify-end gap-2.5 border-t border-slate-100">
                     <button type="button" onclick="closeTokenModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition">Batal</button>
@@ -300,12 +300,12 @@
                 <input type="hidden" id="p-edit-id">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nama Lengkap Siswa</label>
-                    <input type="text" id="p-input-name" required placeholder="Contoh: Siti Aminah" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                    <input type="text" id="p-input-name" required placeholder="Masukkan nama lengkap siswa" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5">USERNAME</label>
-                        <input type="text" id="p-input-username" required placeholder="Contoh: 0081234567" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                        <input type="text" id="p-input-username" required placeholder="NISN / Nomor Peserta" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1.5">Password Login</label>
@@ -336,7 +336,7 @@
             <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <div>
                     <h3 class="font-bold text-lg text-slate-800">Import Data Siswa dari Excel (.xlsx)</h3>
-                    <p class="text-xs text-slate-500 mt-0.5">Unggah file Excel (.xlsx / .xls) untuk menambahkan akun siswa massal.</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Unggah file Excel (.xlsx / .xls / .csv) untuk menambahkan akun siswa massal.</p>
                 </div>
                 <button type="button" onclick="closeImportExcelModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -503,7 +503,8 @@
             })
             : null;
 
-        const SESSION_KEY = 'portal_ujian_session_prod_v3';
+        const SESSION_KEY = 'portal_ujian_session_prod_v4';
+        const LOCAL_BACKUP_KEY = 'portal_ujian_local_backup_v4';
 
         // State Sesi Pengguna Aktif
         let session = {
@@ -518,99 +519,55 @@
             isLoadingCloud: true
         };
 
-        // State Data Aplikasi (Dilengkapi Akun Demo & Jadwal Siap Uji)
+        // State Data Aplikasi (Bersih tanpa akun demo siswa maupun jadwal demo)
         var appState = {
-            selectedMonitoringExamId: 'exam-demo-1',
+            selectedMonitoringExamId: '',
             monitorFilter: { search: '', className: 'ALL', room: 'ALL', status: 'ALL', page: 1, perPage: 10 },
             studentListFilter: { search: '', className: 'ALL', page: 1, perPage: 10 },
             classListFilter: { search: '', page: 1, perPage: 10 },
             settings: {
-                schoolName: 'SMK Negeri Contoh',
+                schoolName: 'Portal Sekolah',
                 portalTitle: 'Portal Ujian Digital',
                 academicYear: '2026/2027',
                 schoolLogo: ''
             },
-            classes: [
-                { id: 'kelas-1', name: 'X TJKT 1', gradeLevel: 'Kelas X / Teknik Jaringan Komputer' },
-                { id: 'kelas-2', name: 'X TJKT 2', gradeLevel: 'Kelas X / Teknik Jaringan Komputer' },
-                { id: 'kelas-3', name: 'XI RPL 1', gradeLevel: 'Kelas XI / Rekayasa Perangkat Lunak' }
-            ],
+            classes: [],
             staffUsers: [
-                { id: 'staff-1', name: 'Administrator Utama', username: 'admin', password: '123', role: 'admin' },
-                { id: 'staff-2', name: 'Pengawas Ruang 1', username: 'pengawas1', password: '123', role: 'pengawas' }
+                { id: 'staff-default-admin', name: 'Administrator', username: 'admin', password: '123', role: 'admin' }
             ],
-            exams: [
-                {
-                    id: 'exam-demo-1',
-                    subject: 'Matematika Terapan',
-                    className: 'X TJKT 1, X TJKT 2',
-                    dateStr: 'Jumat, 27 November 2026',
-                    sessionStr: 'Pukul 07:30 - 23:59 WIB',
-                    status: 'Berlangsung',
-                    token: 'A1B2C',
-                    durationSeconds: 5400,
-                    maxViolations: 3,
-                    gformUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSfD4v-example-demo/viewform?embedded=true',
-                    formTitle: 'Ujian Matematika Terapan'
-                }
-            ],
-            participants: [
-                {
-                    id: 'p-demo-1',
-                    name: 'Budi Santoso',
-                    username: '1001',
-                    password: '123',
-                    email: '1001@sekolah.sch.id',
-                    className: 'X TJKT 1',
-                    room: 'Ruang 1',
-                    examId: 'exam-demo-1',
-                    status: 'Belum Masuk',
-                    violations: 0,
-                    maxViolations: 3,
-                    lastViolationReason: '',
-                    violationLogs: [],
-                    lastActive: '-',
-                    remainingSeconds: 5400,
-                    answers: {}
-                },
-                {
-                    id: 'p-demo-2',
-                    name: 'Siti Aminah',
-                    username: '1002',
-                    password: '123',
-                    email: '1002@sekolah.sch.id',
-                    className: 'X TJKT 1',
-                    room: 'Ruang 1',
-                    examId: 'exam-demo-1',
-                    status: 'Belum Masuk',
-                    violations: 0,
-                    maxViolations: 3,
-                    lastViolationReason: '',
-                    violationLogs: [],
-                    lastActive: '-',
-                    remainingSeconds: 5400,
-                    answers: {}
-                },
-                {
-                    id: 'p-demo-3',
-                    name: 'Rizky Pratama',
-                    username: '1003',
-                    password: '123',
-                    email: '1003@sekolah.sch.id',
-                    className: 'X TJKT 2',
-                    room: 'Ruang 2',
-                    examId: 'exam-demo-1',
-                    status: 'Belum Masuk',
-                    violations: 0,
-                    maxViolations: 3,
-                    lastViolationReason: '',
-                    violationLogs: [],
-                    lastActive: '-',
-                    remainingSeconds: 5400,
-                    answers: {}
-                }
-            ]
+            exams: [],
+            participants: []
         };
+
+        // Simpan & Muat Cadangan Lokal (Berjalan mulus saat offline/tanpa Supabase)
+        function saveLocalBackup() {
+            try {
+                localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify({
+                    settings: appState.settings,
+                    classes: appState.classes,
+                    staffUsers: appState.staffUsers,
+                    exams: appState.exams,
+                    participants: appState.participants
+                }));
+            } catch (e) {}
+        }
+
+        function loadLocalBackup() {
+            try {
+                const raw = localStorage.getItem(LOCAL_BACKUP_KEY);
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (parsed.settings) appState.settings = Object.assign({}, appState.settings, parsed.settings);
+                if (Array.isArray(parsed.classes)) appState.classes = parsed.classes;
+                if (Array.isArray(parsed.staffUsers) && parsed.staffUsers.length > 0) appState.staffUsers = parsed.staffUsers;
+                if (Array.isArray(parsed.exams)) appState.exams = parsed.exams;
+                if (Array.isArray(parsed.participants)) appState.participants = parsed.participants;
+                if (appState.exams.length > 0 && !appState.selectedMonitoringExamId) {
+                    appState.selectedMonitoringExamId = appState.exams[0].id;
+                }
+                document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
+            } catch (e) {}
+        }
 
         /**
          * Mencegah renderApp() menimpa DOM form login saat pengguna sedang mengetik
@@ -694,10 +651,12 @@
                     activeExamId: session.activeExamId
                 }));
             } catch (e) {}
+            saveLocalBackup();
         }
 
         // Sinkronisasi CRUD ke Supabase
         async function syncClassToSupabase(cls) {
+            saveLocalBackup();
             if (!supabaseClient || !cls) return;
             try {
                 const { error } = await supabaseClient.from('classes').upsert({
@@ -710,6 +669,7 @@
         }
 
         async function deleteClassFromSupabase(classId) {
+            saveLocalBackup();
             if (!supabaseClient || !classId) return;
             try {
                 await supabaseClient.from('classes').delete().eq('id', classId);
@@ -717,6 +677,7 @@
         }
 
         async function deleteExamFromSupabase(examId) {
+            saveLocalBackup();
             if (!supabaseClient || !examId) return;
             try {
                 await supabaseClient.from('exams').delete().eq('id', examId);
@@ -724,6 +685,7 @@
         }
 
         async function syncExamToSupabase(exam) {
+            saveLocalBackup();
             if (!supabaseClient || !exam) return;
             try {
                 await supabaseClient.from('exams').upsert({
@@ -744,6 +706,7 @@
         }
 
         async function syncParticipantToSupabase(p) {
+            saveLocalBackup();
             if (!supabaseClient || !p) return;
             try {
                 await supabaseClient.from('participants').upsert({
@@ -769,13 +732,37 @@
         }
 
         async function deleteParticipantFromSupabase(participantId) {
+            saveLocalBackup();
             if (!supabaseClient || !participantId) return;
             try {
                 await supabaseClient.from('participants').delete().eq('id', participantId);
             } catch (e) {}
         }
 
+        async function syncStaffToSupabase(staff) {
+            saveLocalBackup();
+            if (!supabaseClient || !staff) return;
+            try {
+                await supabaseClient.from('staff_users').upsert({
+                    id: staff.id,
+                    name: staff.name,
+                    username: staff.username,
+                    password: staff.password,
+                    role: staff.role
+                });
+            } catch (e) {}
+        }
+
+        async function deleteStaffFromSupabase(staffId) {
+            saveLocalBackup();
+            if (!supabaseClient || !staffId) return;
+            try {
+                await supabaseClient.from('staff_users').delete().eq('id', staffId);
+            } catch (e) {}
+        }
+
         async function syncSettingsToSupabase() {
+            saveLocalBackup();
             if (!supabaseClient) return;
             try {
                 await supabaseClient.from('school_settings').upsert({
@@ -835,7 +822,7 @@
                 document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
             }
 
-            if (classesData && classesData.length > 0) {
+            if (Array.isArray(classesData)) {
                 appState.classes = classesData.map(row => ({
                     id: row.id,
                     name: row.name,
@@ -843,11 +830,11 @@
                 }));
             }
 
-            if (staffData && staffData.length > 0) {
+            if (Array.isArray(staffData) && staffData.length > 0) {
                 appState.staffUsers = staffData;
             }
 
-            if (examsData && examsData.length > 0) {
+            if (Array.isArray(examsData)) {
                 appState.exams = examsData.map(row => ({
                     id: row.id,
                     subject: row.subject,
@@ -867,7 +854,7 @@
                 appState.selectedMonitoringExamId = appState.exams[0].id;
             }
 
-            if (participantsData && participantsData.length > 0) {
+            if (Array.isArray(participantsData)) {
                 appState.participants = participantsData.map(row => ({
                     id: row.id,
                     name: row.name,
@@ -889,6 +876,7 @@
             }
 
             evaluateScheduledExamStatuses();
+            saveLocalBackup();
 
             if (!silent) {
                 session.isLoadingCloud = false;
@@ -924,6 +912,7 @@
                                 if (idx >= 0) appState.classes[idx] = mapped;
                                 else appState.classes.push(mapped);
                             }
+                            saveLocalBackup();
                             safeRenderApp();
                         })
                         .on('postgres_changes', { event: '*', schema: 'public', table: 'exams' }, (payload) => {
@@ -948,6 +937,7 @@
                                 if (idx >= 0) appState.exams[idx] = mapped;
                                 else appState.exams.push(mapped);
                             }
+                            saveLocalBackup();
                             safeRenderApp();
                         })
                         .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, (payload) => {
@@ -977,6 +967,7 @@
                                 if (idx >= 0) appState.participants[idx] = mapped;
                                 else appState.participants.push(mapped);
                             }
+                            saveLocalBackup();
                             checkStudentLockState();
                             safeRenderApp();
                         })
@@ -992,12 +983,13 @@
                     startFallbackPolling();
                 }
             } catch (err) {
-                console.warn('Menggunakan data lokal / demo:', err.message);
+                console.warn('Menggunakan penyimpanan lokal:', err.message);
                 session.isLoadingCloud = false;
                 safeRenderApp(true);
             }
         }
 
+        loadLocalBackup();
         loadSessionState();
 
         // Utilitas Format Tanggal, Jam & Waktu Indonesia
@@ -1107,7 +1099,6 @@
             const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
             const digits = '23456789';
             const allChars = letters + digits;
-            // Pastikan selalu mengandung minimal 1 huruf dan 1 angka
             const raw = [
                 letters.charAt(Math.floor(Math.random() * letters.length)),
                 digits.charAt(Math.floor(Math.random() * digits.length)),
@@ -1291,17 +1282,22 @@
                 return;
             }
 
+            if (appState.participants.length === 0) {
+                showToast('Data peserta ujian belum tersedia. Hubungi panitia atau administrator sekolah.', 'warning');
+                return;
+            }
+
             const student = appState.participants.find(
                 p => p.username.toLowerCase() === usernameVal.toLowerCase()
             );
 
             if (!student) {
-                showToast('USERNAME tidak terdaftar. (Akun demo: 1001 / 123)', 'danger');
+                showToast('USERNAME tidak terdaftar dalam sistem ujian.', 'danger');
                 return;
             }
 
             if ((student.password || '123456') !== passwordVal) {
-                showToast('Password salah! (Akun demo: 1001 / 123)', 'danger');
+                showToast('Password tidak sesuai! Periksa kembali kartu peserta ujian Anda.', 'danger');
                 return;
             }
 
@@ -1350,7 +1346,7 @@
                 return;
             }
             if (tokenInput !== normalizeAlphanumericToken(exam.token)) {
-                showToast('Token Ujian tidak sesuai! (Token demo: ' + exam.token + ')', 'danger');
+                showToast('Token Ujian tidak sesuai! Silakan konfirmasi ke pengawas ruang.', 'danger');
                 return;
             }
 
@@ -1409,7 +1405,7 @@
             );
 
             if (!matchedStaff) {
-                showToast('Username atau password staf salah. (Demo: admin / 123 atau pengawas1 / 123)', 'danger');
+                showToast('Username atau password staf tidak valid.', 'danger');
                 return;
             }
 
@@ -1527,7 +1523,7 @@
             const selectedArr = parseExamClasses(selectedClassesStr);
             const activeClassNames = appState.classes.map(c => c.name);
             if (activeClassNames.length === 0) {
-                return `<p class="text-xs text-rose-500 py-1">Belum ada kelas terdaftar.</p>`;
+                return `<p class="text-xs text-rose-500 py-1">Belum ada kelas terdaftar. Tambahkan kelas di tab Kelas terlebih dahulu.</p>`;
             }
             return activeClassNames.map(cName => {
                 const isChecked = selectedArr.some(s => s.toLowerCase() === cName.toLowerCase());
@@ -1549,7 +1545,7 @@
 
         function getClassOptionsHtml(selectedValue = '') {
             const activeClassNames = appState.classes.map(c => c.name);
-            if (activeClassNames.length === 0) return `<option value="">-- Belum ada kelas --</option>`;
+            if (activeClassNames.length === 0) return `<option value="">-- Tambahkan kelas di tab Kelas dahulu --</option>`;
             return activeClassNames.map(cName => `<option value="${cName}" ${cName === selectedValue ? 'selected' : ''}>${cName}</option>`).join('');
         }
 
@@ -1813,7 +1809,7 @@
             const className = document.getElementById('p-input-class').value.trim();
             const room = document.getElementById('p-input-room').value.trim();
             if (!className) {
-                showToast('Tambahkan kelas terlebih dahulu!', 'warning');
+                showToast('Tambahkan kelas di tab Kelas terlebih dahulu!', 'warning');
                 return;
             }
             const matchedExam = appState.exams.find(ex => examIncludesClass(ex.className, className)) || null;
@@ -2000,10 +1996,9 @@
                 showToast('Library SheetJS sedang dimuat, coba sesaat lagi.', 'warning');
                 return;
             }
-            const defaultClass = appState.classes[0] ? appState.classes[0].name : 'X TJKT 1';
+            const defaultClass = appState.classes[0] ? appState.classes[0].name : 'XII IPA 1';
             const ws = XLSX.utils.json_to_sheet([
-                { 'Nama Lengkap': 'Ahmad Fauzi', 'Username': '0081001', 'Password': '123456', 'Kelas': defaultClass, 'Ruang': 'Ruang 1' },
-                { 'Nama Lengkap': 'Dewi Lestari', 'Username': '0081002', 'Password': '123456', 'Kelas': defaultClass, 'Ruang': 'Ruang 1' }
+                { 'Nama Lengkap': '', 'Username': '', 'Password': '', 'Kelas': defaultClass, 'Ruang': 'Ruang 1' }
             ]);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Data Siswa');
@@ -2029,7 +2024,7 @@
                             name: cols[0],
                             username: cols[1],
                             password: cols[2] || '123456',
-                            className: cols[3] || (appState.classes[0] ? appState.classes[0].name : 'X TJKT 1'),
+                            className: cols[3] || (appState.classes[0] ? appState.classes[0].name : 'Umum'),
                             room: cols[4] || 'Ruang 1'
                         });
                     }
@@ -2060,7 +2055,6 @@
         async function processExcelImport() {
             if (parsedExcelRows.length === 0) return;
             parsedExcelRows.forEach((row, idx) => {
-                // Otomatis tambahkan kelas jika belum ada di master kelas
                 if (row.className && !appState.classes.some(c => c.name.toLowerCase() === row.className.toLowerCase())) {
                     const newCls = { id: `kelas-${Date.now()}-${idx}`, name: row.className, gradeLevel: '' };
                     appState.classes.push(newCls);
@@ -2194,7 +2188,7 @@
             lucide.createIcons();
         }
 
-        // View 1: Halaman Login (Siswa & Pengawas/Admin)
+        // View 1: Halaman Login (Siswa & Pengawas/Admin — Bersih Tanpa Akun Demo)
         function renderLoginView() {
             const isSiswa = session.loginTab === 'siswa';
             const logoUrl = appState.settings.schoolLogo;
@@ -2230,7 +2224,7 @@
                                 <form onsubmit="handleStudentLogin(event)" class="space-y-4">
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-700 mb-1.5">USERNAME</label>
-                                        <input type="text" id="student-username" required autocomplete="username" placeholder="Masukkan username atau NISN" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 transition">
+                                        <input type="text" id="student-username" required autocomplete="username" placeholder="Masukkan username / NISN" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 transition">
                                     </div>
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-700 mb-1.5">Password</label>
@@ -2240,10 +2234,6 @@
                                                 <i data-lucide="eye" class="w-4 h-4"></i>
                                             </button>
                                         </div>
-                                    </div>
-                                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
-                                        <span>Akun Demo Siswa:</span>
-                                        <span class="font-mono font-bold text-indigo-600">1001 / 123</span>
                                     </div>
                                     <button type="submit" class="group w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 hover:from-indigo-700 hover:via-indigo-700 hover:to-violet-700 text-white font-bold text-sm tracking-wide shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2.5 transition-all mt-2">
                                         <i data-lucide="log-in" class="w-4 h-4"></i>
@@ -2255,7 +2245,7 @@
                                 <form onsubmit="handleStaffLogin(event)" class="space-y-4">
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-700 mb-1.5">Username Staf</label>
-                                        <input type="text" id="staff-username" required autocomplete="username" placeholder="admin atau pengawas1" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 transition">
+                                        <input type="text" id="staff-username" required autocomplete="username" placeholder="Masukkan username staf" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 transition">
                                     </div>
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-700 mb-1.5">Password</label>
@@ -2265,10 +2255,6 @@
                                                 <i data-lucide="eye" class="w-4 h-4"></i>
                                             </button>
                                         </div>
-                                    </div>
-                                    <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-500 space-y-0.5">
-                                        <div class="flex justify-between"><span>Admin:</span><span class="font-mono font-bold text-slate-800">admin / 123</span></div>
-                                        <div class="flex justify-between"><span>Pengawas:</span><span class="font-mono font-bold text-slate-800">pengawas1 / 123</span></div>
                                     </div>
                                     <button type="submit" class="group w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 hover:from-indigo-700 hover:to-violet-600 text-white font-bold text-sm tracking-wide shadow-lg flex items-center justify-center gap-2.5 transition-all mt-2">
                                         <i data-lucide="shield-check" class="w-4 h-4"></i>
@@ -2294,7 +2280,6 @@
                 return renderLoginView();
             }
             const classExams = appState.exams.filter(ex => examIncludesClass(ex.className, student.className));
-            const displayExams = classExams.length > 0 ? classExams : appState.exams;
 
             return `
                 <div class="min-h-screen flex flex-col bg-[#F4F6FA]">
@@ -2317,9 +2302,9 @@
                             <p class="text-xs sm:text-sm text-indigo-100 mt-1">Username: <strong>${student.username}</strong> • Kelas: <strong>${student.className}</strong> • ${student.room}</p>
                         </div>
                         <div class="space-y-4">
-                            ${displayExams.length === 0 ? `
-                                <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-500">Belum ada jadwal ujian untuk kelas Anda.</div>
-                            ` : displayExams.map(ex => {
+                            ${classExams.length === 0 ? `
+                                <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center text-xs text-slate-500">Belum ada jadwal ujian aktif untuk kelas <strong>${student.className}</strong>.</div>
+                            ` : classExams.map(ex => {
                                 const isOpen = ex.status === 'Berlangsung';
                                 const isFinishedByStudent = student.status === 'Selesai' && student.examId === ex.id;
                                 return `
@@ -2331,7 +2316,6 @@
                                             </div>
                                             <h3 class="text-lg font-extrabold text-slate-900 mt-1.5">${ex.subject}</h3>
                                             <p class="text-xs text-slate-500">${ex.dateStr} • ${ex.sessionStr}</p>
-                                            ${isOpen ? `<p class="text-[11px] text-indigo-600 font-semibold mt-1">Token Demo: <span class="font-mono font-bold">${ex.token}</span></p>` : ''}
                                         </div>
                                         ${isFinishedByStudent
                                             ? `<span class="px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">Sudah Dikerjakan</span>`
@@ -2418,10 +2402,10 @@
                 <div class="max-w-5xl mx-auto space-y-6">
                     <div>
                         <h1 class="text-2xl font-extrabold text-slate-900">Manajemen Kelas</h1>
-                        <p class="text-xs sm:text-sm text-slate-500 mt-1">Mengubah nama kelas akan otomatis memperbarui relasi pada data siswa dan jadwal ujian.</p>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-1">Tambahkan daftar kelas terlebih dahulu sebelum menginput atau mengimport data siswa.</p>
                     </div>
                     <form onsubmit="addNewClass(event)" class="bg-white rounded-2xl border border-slate-200 p-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <input type="text" id="new-class-name" required placeholder="Nama Kelas (mis. XI RPL 2)" class="px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                        <input type="text" id="new-class-name" required placeholder="Nama Kelas (mis. XII IPA 1)" class="px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                         <input type="text" id="new-class-grade" placeholder="Jurusan / Keterangan" class="px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                         <button type="submit" class="py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition">+ Tambah Kelas</button>
                     </form>
@@ -2434,7 +2418,9 @@
                             <table class="w-full text-left border-collapse">
                                 <thead><tr class="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase text-slate-400"><th class="py-3 px-5">NO</th><th class="py-3 px-5">NAMA KELAS</th><th class="py-3 px-5">KETERANGAN / JURUSAN</th><th class="py-3 px-5">JUMLAH SISWA</th><th class="py-3 px-5 text-right">AKSI</th></tr></thead>
                                 <tbody class="divide-y divide-slate-100 text-sm">
-                                    ${rows.map((cls, i) => {
+                                    ${rows.length === 0 ? `
+                                        <tr><td colspan="5" class="py-10 text-center text-xs text-slate-400">Belum ada kelas terdaftar. Silakan tambahkan kelas di formulir atas.</td></tr>
+                                    ` : rows.map((cls, i) => {
                                         const cnt = appState.participants.filter(p => p.className.toLowerCase() === cls.name.toLowerCase()).length;
                                         return `<tr>
                                             <td class="py-3 px-5 text-xs text-slate-400">${startIdx + i + 1}</td>
@@ -2503,7 +2489,9 @@
                             <table class="w-full text-left border-collapse">
                                 <thead><tr class="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase text-slate-400"><th class="py-3 px-4">NO</th><th class="py-3 px-4">NAMA</th><th class="py-3 px-4">USERNAME</th><th class="py-3 px-4">PASSWORD</th><th class="py-3 px-4">KELAS & RUANG</th><th class="py-3 px-4 text-right">AKSI</th></tr></thead>
                                 <tbody class="divide-y divide-slate-100 text-sm">
-                                    ${rows.map((p, i) => `
+                                    ${rows.length === 0 ? `
+                                        <tr><td colspan="6" class="py-10 text-center text-xs text-slate-400">Belum ada data siswa. Klik <strong>Tambah Siswa</strong> atau <strong>Import Excel</strong> untuk menambahkan peserta ujian.</td></tr>
+                                    ` : rows.map((p, i) => `
                                         <tr>
                                             <td class="py-3 px-4 text-xs text-slate-400">${startIdx + i + 1}</td>
                                             <td class="py-3 px-4 font-bold text-slate-900">${p.name}</td>
@@ -2542,7 +2530,7 @@
                         </button>
                     </div>
                     ${appState.exams.length === 0 ? `
-                        <div class="bg-white rounded-2xl border border-slate-200 p-10 text-center text-xs text-slate-500">Belum ada jadwal ujian dibuat.</div>
+                        <div class="bg-white rounded-2xl border border-slate-200 p-10 text-center text-xs text-slate-500">Belum ada jadwal ujian dibuat. Klik <strong>Tambah Jadwal Ujian</strong> untuk memulai.</div>
                     ` : `
                         <div class="space-y-4">
                             ${appState.exams.map(ex => {
@@ -2638,7 +2626,9 @@
                             <table class="w-full text-left border-collapse">
                                 <thead><tr class="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase text-slate-400"><th class="py-3 px-4">PESERTA</th><th class="py-3 px-4">KELAS / RUANG</th><th class="py-3 px-4">STATUS</th><th class="py-3 px-4">PELANGGARAN</th><th class="py-3 px-4 text-right">AKSI</th></tr></thead>
                                 <tbody class="divide-y divide-slate-100 text-sm">
-                                    ${rows.map(p => {
+                                    ${rows.length === 0 ? `
+                                        <tr><td colspan="5" class="py-10 text-center text-xs text-slate-400">Belum ada data peserta ujian untuk ditampilkan.</td></tr>
+                                    ` : rows.map(p => {
                                         const badgeColor = p.status === 'Terkunci' ? 'bg-rose-100 text-rose-700' : p.status === 'Mengerjakan' ? 'bg-indigo-100 text-indigo-700' : p.status === 'Selesai' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600';
                                         return `
                                             <tr>
@@ -2663,51 +2653,172 @@
             `;
         }
 
-        // Tab 5: Pengaturan Identitas Sekolah
+        // Tab 5: Pengaturan Identitas Sekolah, Upload Logo & Manajemen Staf
+        function handleSchoolLogoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 200;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w > h) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        } else {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                    }
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    appState.settings.schoolLogo = canvas.toDataURL('image/png', 0.9);
+                    syncSettingsToSupabase();
+                    renderApp();
+                    showToast('Logo sekolah berhasil diunggah!', 'success');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeSchoolLogo() {
+            appState.settings.schoolLogo = '';
+            syncSettingsToSupabase();
+            renderApp();
+            showToast('Logo sekolah dihapus.', 'info');
+        }
+
         function saveSchoolSettings(e) {
             e.preventDefault();
             appState.settings.schoolName = document.getElementById('set-school-name').value.trim();
             appState.settings.portalTitle = document.getElementById('set-portal-title').value.trim();
             appState.settings.academicYear = document.getElementById('set-academic-year').value.trim();
-            appState.settings.schoolLogo = document.getElementById('set-school-logo').value.trim();
             document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
             syncSettingsToSupabase();
             renderApp();
             showToast('Pengaturan identitas sekolah disimpan!', 'success');
         }
 
+        function addStaffAccount(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-staff-name').value.trim();
+            const username = document.getElementById('new-staff-username').value.trim();
+            const password = document.getElementById('new-staff-password').value.trim();
+            const role = document.getElementById('new-staff-role').value;
+            if (!name || !username || !password) return;
+            if (appState.staffUsers.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+                showToast('Username staf sudah digunakan!', 'warning');
+                return;
+            }
+            const newStaff = { id: 'staff-' + Date.now(), name, username, password, role };
+            appState.staffUsers.push(newStaff);
+            syncStaffToSupabase(newStaff);
+            renderApp();
+            showToast(`Akun ${role === 'admin' ? 'Admin' : 'Pengawas'} (${name}) ditambahkan!`, 'success');
+        }
+
+        function removeStaffAccount(staffId) {
+            if (appState.staffUsers.length <= 1) {
+                showToast('Minimal harus tersisa 1 akun staf.', 'warning');
+                return;
+            }
+            appState.staffUsers = appState.staffUsers.filter(u => u.id !== staffId);
+            deleteStaffFromSupabase(staffId);
+            renderApp();
+            showToast('Akun staf dihapus.', 'info');
+        }
+
         function renderPengaturanTab() {
+            const logoUrl = appState.settings.schoolLogo;
             return `
-                <div class="max-w-3xl mx-auto bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
-                    <div>
-                        <h1 class="text-xl font-extrabold text-slate-900">Pengaturan Identitas Portal</h1>
-                        <p class="text-xs text-slate-500 mt-0.5">Identitas ini tampil pada halaman login dan kop kartu peserta ujian.</p>
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
+                        <div>
+                            <h1 class="text-xl font-extrabold text-slate-900">Pengaturan Identitas & Logo Sekolah</h1>
+                            <p class="text-xs text-slate-500 mt-0.5">Identitas dan logo ini tampil pada halaman login dan kop kartu peserta ujian.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
+                            <div class="w-16 h-16 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                                ${logoUrl
+                                    ? `<img src="${logoUrl}" alt="Logo Sekolah" class="w-full h-full object-contain p-1.5">`
+                                    : `<i data-lucide="image" class="w-6 h-6 text-slate-300"></i>`
+                                }
+                            </div>
+                            <div class="flex-1 min-w-[200px]">
+                                <div class="text-xs font-bold text-slate-800">Logo Sekolah (PNG / JPG / SVG)</div>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Otomatis dikompresi agar ringan dan tampil tajam saat cetak kartu.</p>
+                                <div class="flex flex-wrap items-center gap-2 mt-2.5">
+                                    <label class="cursor-pointer inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition">
+                                        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                        <span>Unggah Logo</span>
+                                        <input type="file" accept="image/*" onchange="handleSchoolLogoUpload(event)" class="hidden">
+                                    </label>
+                                    ${logoUrl ? `<button type="button" onclick="removeSchoolLogo()" class="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition">Hapus Logo</button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <form onsubmit="saveSchoolSettings(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nama Sekolah</label>
+                                    <input type="text" id="set-school-name" required value="${appState.settings.schoolName}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Judul Portal Ujian</label>
+                                    <input type="text" id="set-portal-title" required value="${appState.settings.portalTitle}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tahun Pelajaran</label>
+                                    <input type="text" id="set-academic-year" required value="${appState.settings.academicYear}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                                </div>
+                            </div>
+                            <div class="pt-3 border-t border-slate-100 flex justify-end">
+                                <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition">Simpan Identitas Sekolah</button>
+                            </div>
+                        </form>
                     </div>
-                    <form onsubmit="saveSchoolSettings(event)" class="space-y-4">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nama Sekolah</label>
-                                <input type="text" id="set-school-name" required value="${appState.settings.schoolName}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tahun Pelajaran</label>
-                                <input type="text" id="set-academic-year" required value="${appState.settings.academicYear}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
-                            </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 space-y-5">
+                        <div>
+                            <h2 class="text-lg font-extrabold text-slate-900">Manajemen Akun Admin & Pengawas</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">Kelola akun login untuk panitia dan pengawas ruang ujian.</p>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Judul Portal Ujian</label>
-                                <input type="text" id="set-portal-title" required value="${appState.settings.portalTitle}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">URL Logo Sekolah (Opsional)</label>
-                                <input type="url" id="set-school-logo" value="${appState.settings.schoolLogo || ''}" placeholder="https://..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
-                            </div>
+                        <form onsubmit="addStaffAccount(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+                            <input type="text" id="new-staff-name" required placeholder="Nama Lengkap" class="px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                            <input type="text" id="new-staff-username" required placeholder="Username" class="px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                            <input type="text" id="new-staff-password" required placeholder="Password" class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono">
+                            <select id="new-staff-role" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white font-semibold">
+                                <option value="pengawas">Pengawas Ruang</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                            <button type="submit" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs font-semibold transition">+ Tambah Staf</button>
+                        </form>
+                        <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                            <table class="w-full text-left border-collapse">
+                                <thead><tr class="bg-slate-50 border-b border-slate-100 text-[11px] font-bold uppercase text-slate-400"><th class="py-2.5 px-4">NAMA</th><th class="py-2.5 px-4">USERNAME</th><th class="py-2.5 px-4">PASSWORD</th><th class="py-2.5 px-4">PERAN</th><th class="py-2.5 px-4 text-right">AKSI</th></tr></thead>
+                                <tbody class="divide-y divide-slate-100 text-xs">
+                                    ${appState.staffUsers.map(u => `
+                                        <tr>
+                                            <td class="py-2.5 px-4 font-bold text-slate-800">${u.name}</td>
+                                            <td class="py-2.5 px-4 font-mono">${u.username}</td>
+                                            <td class="py-2.5 px-4 font-mono text-indigo-600">${u.password}</td>
+                                            <td class="py-2.5 px-4 uppercase font-semibold text-slate-600">${u.role}</td>
+                                            <td class="py-2.5 px-4 text-right">
+                                                <button type="button" onclick="removeStaffAccount('${u.id}')" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 font-semibold">Hapus</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="pt-3 border-t border-slate-100 flex justify-end">
-                            <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold transition">Simpan Pengaturan</button>
-                        </div>
-                    </form>
+                    </div>
                 </div>
             `;
         }
