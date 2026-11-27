@@ -58,32 +58,69 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #94A3B8;
         }
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            #print-cards-area, #print-cards-area * {
-                visibility: visible;
-            }
-            #print-cards-area {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                background: white !important;
-                padding: 0 !important;
-                margin: 0 !important;
-            }
-            .no-print {
-                display: none !important;
-            }
-            .login-card-item {
-                break-inside: avoid;
-                page-break-inside: avoid;
-                border: 1.5px solid #334155 !important;
-                box-shadow: none !important;
-            }
-        }
+       @media print {
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    html, body {
+        height: auto !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+    }
+
+    body * {
+        visibility: hidden;
+    }
+
+    #print-cards-modal,
+    #print-cards-modal > div {
+        position: static !important;
+        inset: auto !important;
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+        box-shadow: none !important;
+        border: none !important;
+        background: transparent !important;
+    }
+
+    #print-cards-modal > div > div:nth-child(3) {
+        overflow: visible !important;
+        height: auto !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    #print-cards-area,
+    #print-cards-area * {
+        visibility: visible;
+    }
+
+    #print-cards-area {
+        position: static !important;
+        width: 100% !important;
+        max-width: none !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #ffffff !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    .login-card-item {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        border: 1.5px solid #334155 !important;
+        box-shadow: none !important;
+    }
+}
     </style>
 </head>
 <body class="min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-700">
