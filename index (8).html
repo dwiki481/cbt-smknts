@@ -2448,4 +2448,520 @@
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-700 mb-1.5">Password</label>
                                         <div class="relative">
-                                            <input type="password" id="student-password" required autocomplete="current-password" placeholder="Masukkan password peserta" class="w-full px-4 py-3 pr-11 rounded-xl border border-slate-20
+                                            <input type="password" id="student-password" required autocomplete="current-password" placeholder="Masukkan password peserta" class="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 transition">
+                                            <button type="button" onclick="togglePasswordVisibility('student-password', this)" aria-label="Tampilkan atau sembunyikan password" class="absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400 hover:text-indigo-600 focus:outline-none transition">
+                                                <i data-lucide="eye" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="group w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-600 to-violet-600 hover:from-indigo-700 hover:via-indigo-700 hover:to-violet-700 text-white font-bold text-sm tracking-wide shadow-lg shadow-indigo-500/30 flex items-center justify-center gap-2.5 transition-all mt-3">
+                                        <i data-lucide="log-in" class="w-4 h-4"></i>
+                                        <span>Masuk ke Portal Ujian</span>
+                                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                    </button>
+                                </form>
+                            ` : `
+                                <form onsubmit="handleStaffLogin(event)" class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Username Staf</label>
+                                        <input type="text" id="staff-username" required autocomplete="username" placeholder="Masukkan username staf" class="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 transition">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">Password</label>
+                                        <div class="relative">
+                                            <input type="password" id="staff-password" required autocomplete="current-password" placeholder="••••••••" class="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 text-sm placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 transition">
+                                            <button type="button" onclick="togglePasswordVisibility('staff-password', this)" aria-label="Tampilkan atau sembunyikan password" class="absolute inset-y-0 right-0 flex items-center px-3.5 text-slate-400 hover:text-indigo-600 focus:outline-none transition">
+                                                <i data-lucide="eye" class="w-4 h-4"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="group w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 hover:from-indigo-700 hover:to-violet-600 text-white font-bold text-sm tracking-wide shadow-lg flex items-center justify-center gap-2.5 transition-all mt-3">
+                                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                                        <span>Masuk ke Dashboard Staf</span>
+                                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                    </button>
+                                </form>
+                            `}
+                        </div>
+                    </div>
+                    <footer class="text-center text-xs text-slate-400 mt-8">
+                        ${appState.settings.schoolName} — Sistem Ujian Berbasis Komputer
+                    </footer>
+                </div>
+            `;
+        }
+
+        function renderStudentDashboardView() {
+            const student = appState.participants.find(p => p.id === session.activeStudentId);
+            if (!student) {
+                session.view = 'login';
+                return renderLoginView();
+            }
+            const logoUrl = appState.settings.schoolLogo;
+            const classExams = appState.exams.filter(ex => examIncludesClass(ex.className, student.className));
+
+            return `
+                <div class="min-h-screen flex flex-col bg-[#F4F6FA]">
+                    <header class="bg-white border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between sticky top-0 z-30">
+                        <div class="flex items-center gap-3">
+                            ${logoUrl
+                                ? `<img src="${logoUrl}" alt="Logo" class="w-9 h-9 rounded-xl object-contain bg-white border border-slate-100 p-1">`
+                                : `<div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center"><i data-lucide="graduation-cap" class="w-5 h-5"></i></div>`
+                            }
+                            <div>
+                                <div class="font-bold text-sm text-slate-900">${appState.settings.portalTitle}</div>
+                                <div class="text-[11px] text-slate-500">${appState.settings.schoolName}</div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="logoutStudent()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-rose-50 hover:text-rose-600 text-xs font-semibold text-slate-600 transition">
+                            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                            <span>Keluar</span>
+                        </button>
+                    </header>
+                    <main class="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-7 space-y-6">
+                        <div class="bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-2xl p-6 text-white shadow-md">
+                            <h1 class="text-xl sm:text-2xl font-extrabold uppercase">${student.name}</h1>
+                            <p class="text-xs sm:text-sm text-indigo-100 mt-1">Username: <strong>${student.username}</strong> • Kelas: <strong>${student.className}</strong> • ${student.room}</p>
+                        </div>
+
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-sm sm:text-base font-bold text-slate-800">Daftar Jadwal Ujian Kelas ${student.className}</h2>
+                            <button type="button" onclick="manualRefreshStudentSchedule()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-indigo-50 text-indigo-600 border border-slate-200 text-xs font-semibold transition">
+                                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                <span>Segarkan Jadwal</span>
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            ${classExams.length === 0 ? `
+                                <div class="bg-white rounded-2xl border border-slate-200 p-8 text-center space-y-3">
+                                    <p class="text-xs sm:text-sm text-slate-500">Belum ada jadwal ujian aktif untuk kelas <strong>${student.className}</strong>.</p>
+                                    <button type="button" onclick="manualRefreshStudentSchedule()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold transition">
+                                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                                        <span>Muat Ulang Jadwal</span>
+                                    </button>
+                                </div>
+                            ` : classExams.map(ex => {
+                                const isOpen = ex.status === 'Berlangsung';
+                                const isDoneByStudent = student.status === 'Selesai' && student.examId === ex.id;
+                                const isLockedByStudent = student.status === 'Terkunci' && student.examId === ex.id;
+                                return `
+                                    <div class="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div>
+                                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${isOpen ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${ex.status}</span>
+                                            <h3 class="text-lg font-extrabold text-slate-900 mt-1">${ex.subject}</h3>
+                                            <p class="text-xs text-slate-500">${ex.dateStr} • ${ex.sessionStr} • Durasi ${Math.round(ex.durationSeconds / 60)} Menit</p>
+                                        </div>
+                                        ${isDoneByStudent
+                                            ? `<span class="px-4 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">Sudah Dikerjakan</span>`
+                                            : isLockedByStudent
+                                                ? `<span class="px-4 py-2.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold">Ujian Terkunci (Hubungi Pengawas)</span>`
+                                                : isOpen
+                                                    ? `<button type="button" onclick="openTokenModal('${ex.id}')" class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition">Kerjakan Ujian</button>`
+                                                    : `<span class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-400 text-xs font-semibold">${ex.status}</span>`
+                                        }
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </main>
+                </div>
+            `;
+        }
+
+        function renderProctorView() {
+            const isAdmin = session.proctorRole === 'admin';
+            const tab = session.proctorTab;
+            const logoUrl = appState.settings.schoolLogo;
+            let tabContent = renderJadwalTokenTab();
+            if (tab === 'kelas' && isAdmin) tabContent = renderKelasTab();
+            else if (tab === 'siswa' && isAdmin) tabContent = renderDataSiswaTab();
+            else if (tab === 'monitoring') tabContent = renderMonitoringTab();
+            else if (tab === 'pengaturan' && isAdmin) tabContent = renderPengaturanTab();
+
+            return `
+                <div class="min-h-screen flex flex-col bg-[#F4F6FA]">
+                    <header class="bg-white border-b border-slate-200/80 px-4 sm:px-8 h-16 flex items-center justify-between sticky top-0 z-30">
+                        <div class="flex items-center gap-3">
+                            ${logoUrl
+                                ? `<img src="${logoUrl}" alt="Logo" class="w-9 h-9 rounded-xl object-contain bg-white border border-slate-100 p-1">`
+                                : `<div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center"><i data-lucide="shield-check" class="w-5 h-5"></i></div>`
+                            }
+                            <div>
+                                <div class="font-bold text-sm text-slate-900">${appState.settings.portalTitle}</div>
+                                <div class="text-[11px] text-slate-500">${session.proctorName} • ${isAdmin ? 'Administrator' : 'Pengawas Ruang'}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="hidden md:flex items-center bg-slate-100 p-0.5 rounded-lg text-[11px] font-semibold">
+                                <button type="button" onclick="switchProctorRole('pengawas')" class="px-2.5 py-1 rounded-md ${!isAdmin ? 'bg-white text-indigo-600 shadow-2xs' : 'text-slate-500'}">Mode Pengawas</button>
+                                <button type="button" onclick="switchProctorRole('admin')" class="px-2.5 py-1 rounded-md ${isAdmin ? 'bg-white text-indigo-600 shadow-2xs' : 'text-slate-500'}">Mode Admin</button>
+                            </div>
+                            <button type="button" onclick="logoutProctor()" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-700">
+                                <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                                <span>Keluar</span>
+                            </button>
+                        </div>
+                    </header>
+                    <div class="bg-white border-b border-slate-200/70 px-4 sm:px-8 overflow-x-auto">
+                        <nav class="flex items-center gap-6 max-w-5xl mx-auto">
+                            ${isAdmin ? `
+                                <button type="button" onclick="switchProctorTab('kelas')" class="py-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap ${tab === 'kelas' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'}">Kelas</button>
+                                <button type="button" onclick="switchProctorTab('siswa')" class="py-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap ${tab === 'siswa' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'}">Data Siswa</button>
+                                <button type="button" onclick="openPrintCardsModal()" class="py-3.5 border-b-2 border-transparent text-xs sm:text-sm font-semibold whitespace-nowrap text-slate-500 hover:text-indigo-600">Cetak Kartu Login</button>
+                            ` : ''}
+                            <button type="button" onclick="switchProctorTab('jadwal')" class="py-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap ${tab === 'jadwal' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'}">Jadwal Ujian & Token</button>
+                            <button type="button" onclick="switchProctorTab('monitoring')" class="py-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap ${tab === 'monitoring' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'}">Monitoring</button>
+                            ${isAdmin ? `<button type="button" onclick="switchProctorTab('pengaturan')" class="py-3.5 border-b-2 text-xs sm:text-sm font-semibold whitespace-nowrap ${tab === 'pengaturan' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500'}">Pengaturan</button>` : ''}
+                        </nav>
+                    </div>
+                    <main class="flex-1 px-4 sm:px-8 py-7">${tabContent}</main>
+                </div>
+            `;
+        }
+
+        function setClassListFilter(key, value) { appState.classListFilter[key] = value; appState.classListFilter.page = 1; renderApp(); }
+        function setClassListPage(page) { appState.classListFilter.page = page; renderApp(); }
+        function setClassListPerPage(perPage) { appState.classListFilter.perPage = perPage; appState.classListFilter.page = 1; renderApp(); }
+
+        function renderKelasTab() {
+            const cf = appState.classListFilter;
+            const filtered = appState.classes.filter(c => !cf.search || c.name.toLowerCase().includes(cf.search.toLowerCase()));
+            const startIdx = (cf.page - 1) * cf.perPage;
+            const rows = filtered.slice(startIdx, startIdx + cf.perPage);
+            return `
+                <div class="max-w-5xl mx-auto space-y-6">
+                    <h1 class="text-2xl font-extrabold text-slate-900">Manajemen Kelas</h1>
+                    <form onsubmit="addNewClass(event)" class="bg-white rounded-2xl border border-slate-200 p-5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <input type="text" id="new-class-name" required placeholder="Nama Kelas (mis. X TJKT 1)" class="px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                        <input type="text" id="new-class-grade" placeholder="Jurusan / Keterangan" class="px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                        <button type="submit" class="py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold">+ Tambah Kelas</button>
+                    </form>
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead><tr class="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase text-slate-400"><th class="py-3 px-5">NO</th><th class="py-3 px-5">NAMA KELAS</th><th class="py-3 px-5">JUMLAH SISWA</th><th class="py-3 px-5 text-right">AKSI</th></tr></thead>
+                            <tbody class="divide-y divide-slate-100 text-sm">
+                                ${rows.length === 0 ? `<tr><td colspan="4" class="py-8 text-center text-xs text-slate-400">Belum ada kelas terdaftar.</td></tr>` : rows.map((cls, i) => {
+                                    const cnt = appState.participants.filter(p => normalizeClassKey(p.className) === normalizeClassKey(cls.name)).length;
+                                    return `<tr>
+                                        <td class="py-3 px-5 text-xs text-slate-400">${startIdx + i + 1}</td>
+                                        <td class="py-3 px-5 font-bold text-slate-900">${cls.name} <span class="text-xs font-normal text-slate-400 block">${cls.gradeLevel || ''}</span></td>
+                                        <td class="py-3 px-5 text-xs font-semibold text-indigo-600">${cnt} Siswa</td>
+                                        <td class="py-3 px-5 text-right space-x-1">
+                                            <button type="button" onclick="openEditClassModal('${cls.id}')" class="px-3 py-1 rounded-lg border border-slate-200 text-xs font-semibold">Edit</button>
+                                            <button type="button" onclick="removeClass('${cls.id}')" class="px-3 py-1 rounded-lg bg-rose-50 text-rose-600 text-xs font-semibold">Hapus</button>
+                                        </td>
+                                    </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                        ${renderPaginationControls(filtered.length, cf.page, cf.perPage, 'setClassListPage', 'setClassListPerPage')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function setStudentListFilter(key, value) { appState.studentListFilter[key] = value; appState.studentListFilter.page = 1; renderApp(); }
+        function setStudentListPage(page) { appState.studentListFilter.page = page; renderApp(); }
+        function setStudentListPerPage(perPage) { appState.studentListFilter.perPage = perPage; appState.studentListFilter.page = 1; renderApp(); }
+
+        function renderDataSiswaTab() {
+            const sf = appState.studentListFilter;
+            const searchLower = (sf.search || '').trim().toLowerCase();
+            const uniqueClasses = getMergedClassNames();
+            const filtered = appState.participants.filter(p =>
+                (!searchLower || p.name.toLowerCase().includes(searchLower) || p.username.toLowerCase().includes(searchLower)) &&
+                (sf.className === 'ALL' || normalizeClassKey(p.className) === normalizeClassKey(sf.className))
+            );
+            const startIdx = (sf.page - 1) * sf.perPage;
+            const rows = filtered.slice(startIdx, startIdx + sf.perPage);
+            return `
+                <div class="max-w-5xl mx-auto space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <h1 class="text-2xl font-extrabold text-slate-900">Data Akun Siswa</h1>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="openPrintCardsModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-white text-xs font-semibold">Cetak Kartu</button>
+                            <button type="button" onclick="openImportExcelModal()" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold">Import Excel</button>
+                            <button type="button" onclick="openAddParticipantModal()" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold">+ Tambah Siswa</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-slate-200 p-3.5 flex flex-wrap gap-2.5">
+                        <input type="text" id="student-search-input" value="${sf.search}" oninput="setStudentListFilter('search', this.value)" placeholder="Cari nama atau username..." class="flex-1 min-w-[180px] px-3.5 py-2 rounded-xl border border-slate-200 text-xs">
+                        <select onchange="setStudentListFilter('className', this.value)" class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-slate-50">
+                            <option value="ALL">Semua Kelas (${appState.participants.length})</option>
+                            ${uniqueClasses.map(c => `<option value="${c}" ${normalizeClassKey(sf.className) === normalizeClassKey(c) ? 'selected' : ''}>${c}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                        <table class="w-full text-left border-collapse">
+                            <thead><tr class="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase text-slate-400"><th class="py-3 px-4">NO</th><th class="py-3 px-4">NAMA</th><th class="py-3 px-4">USERNAME</th><th class="py-3 px-4">PASSWORD</th><th class="py-3 px-4">KELAS</th><th class="py-3 px-4 text-right">AKSI</th></tr></thead>
+                            <tbody class="divide-y divide-slate-100 text-sm">
+                                ${rows.length === 0 ? `<tr><td colspan="6" class="py-8 text-center text-xs text-slate-400">Belum ada data siswa. Silakan tambah manual atau import dari Excel.</td></tr>` : rows.map((p, i) => `
+                                    <tr>
+                                        <td class="py-3 px-4 text-xs text-slate-400">${startIdx + i + 1}</td>
+                                        <td class="py-3 px-4 font-bold text-slate-900">${p.name}</td>
+                                        <td class="py-3 px-4 font-mono text-xs">${p.username}</td>
+                                        <td class="py-3 px-4 font-mono text-xs text-indigo-600 font-bold">${p.password}</td>
+                                        <td class="py-3 px-4 text-xs">${p.className} • ${p.room}</td>
+                                        <td class="py-3 px-4 text-right space-x-1">
+                                            <button type="button" onclick="openAddParticipantModal('${p.id}')" class="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold">Edit</button>
+                                            <button type="button" onclick="removeParticipant('${p.id}')" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 text-xs font-semibold">Hapus</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ${renderPaginationControls(filtered.length, sf.page, sf.perPage, 'setStudentListPage', 'setStudentListPerPage')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderJadwalTokenTab() {
+            const isAdmin = session.proctorRole === 'admin';
+            return `
+                <div class="max-w-5xl mx-auto space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Jadwal Ujian & Token</h1>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-1">Token 5 karakter huruf & angka. Menghapus jadwal tidak menghapus data siswa.</p>
+                        </div>
+                        <button type="button" onclick="openScheduleModal()" class="self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>Tambah Jadwal Ujian</span>
+                        </button>
+                    </div>
+                    ${appState.exams.length === 0 ? `
+                        <div class="bg-white rounded-2xl border border-slate-200 p-10 text-center text-xs text-slate-500">Belum ada jadwal ujian dibuat. Klik <strong>+ Tambah Jadwal Ujian</strong> untuk memulai.</div>
+                    ` : `
+                        <div class="space-y-4">
+                            ${appState.exams.map(ex => {
+                                const isOngoing = ex.status === 'Berlangsung';
+                                return `
+                                    <div class="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                                        <div class="space-y-1.5">
+                                            <span class="px-3 py-0.5 rounded-full text-xs font-bold ${isOngoing ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${ex.status}</span>
+                                            <div class="flex flex-wrap gap-1 pt-1">
+                                                ${parseExamClasses(ex.className).map(c => `<span class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-semibold">${c}</span>`).join('')}
+                                            </div>
+                                            <h3 class="text-lg sm:text-xl font-extrabold text-slate-900">${ex.subject}</h3>
+                                            <p class="text-xs text-slate-500">${ex.dateStr} • ${ex.sessionStr} • Durasi ${Math.round(ex.durationSeconds / 60)} Menit</p>
+                                        </div>
+                                        <div class="flex flex-wrap items-center gap-3">
+                                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                                                <div class="text-[10px] font-bold uppercase text-slate-400 mb-1">TOKEN (5 KARAKTER)</div>
+                                                <div class="flex items-center gap-1.5">
+                                                    <input type="text" value="${ex.token}" maxlength="5" onchange="updateManualExamToken('${ex.id}', this.value)" class="w-24 px-2 py-1 rounded-lg border border-slate-200 bg-white font-mono text-base font-extrabold tracking-widest text-indigo-600 uppercase text-center">
+                                                    <button type="button" onclick="copyText('${ex.token}', 'Token')" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500"><i data-lucide="copy" class="w-4 h-4"></i></button>
+                                                    <button type="button" onclick="randomizeManualExamToken('${ex.id}')" class="p-1.5 rounded-lg hover:bg-slate-200 text-slate-500"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i></button>
+                                                </div>
+                                            </div>
+                                            <div class="flex flex-wrap gap-2">
+                                                ${ex.status === 'Berlangsung'
+                                                    ? `<button type="button" onclick="endExamSession('${ex.id}')" class="px-4 py-2.5 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold">Akhiri Ujian</button>`
+                                                    : ex.status === 'Selesai'
+                                                        ? `<button type="button" disabled title="Waktu ujian sudah habis. Klik Edit untuk menambah jam ujian." class="px-4 py-2.5 rounded-xl bg-slate-100 text-slate-400 border border-slate-200 text-xs font-semibold cursor-not-allowed">Ujian Selesai</button>`
+                                                        : `<button type="button" onclick="openExamSession('${ex.id}')" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold">Buka Ujian</button>`
+                                                }
+                                                ${isAdmin ? `
+                                                    <button type="button" onclick="openScheduleModal('${ex.id}')" class="px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold">Edit</button>
+                                                    <button type="button" onclick="openDeleteExamModal('${ex.id}')" class="px-3.5 py-2.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 text-xs font-semibold">Hapus</button>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        function setMonitorFilter(key, value) { appState.monitorFilter[key] = value; appState.monitorFilter.page = 1; renderApp(); }
+        function setMonitorPage(page) { appState.monitorFilter.page = page; renderApp(); }
+        function setMonitorPerPage(perPage) { appState.monitorFilter.perPage = perPage; appState.monitorFilter.page = 1; renderApp(); }
+
+        function renderMonitoringTab() {
+            const mf = appState.monitorFilter;
+            const selectedExam = appState.exams.find(e => e.id === appState.selectedMonitoringExamId) || appState.exams[0];
+            const baseParticipants = selectedExam
+                ? appState.participants.filter(p => examIncludesClass(selectedExam.className, p.className) || p.examId === selectedExam.id)
+                : appState.participants;
+
+            const searchLower = (mf.search || '').trim().toLowerCase();
+            const filtered = baseParticipants.filter(p => {
+                const matchSearch = !searchLower || p.name.toLowerCase().includes(searchLower) || p.username.toLowerCase().includes(searchLower);
+                const matchStatus = mf.status === 'ALL' || p.status === mf.status;
+                return matchSearch && matchStatus;
+            });
+
+            const startIdx = (mf.page - 1) * mf.perPage;
+            const rows = filtered.slice(startIdx, startIdx + mf.perPage);
+
+            return `
+                <div class="max-w-5xl mx-auto space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <h1 class="text-2xl font-extrabold text-slate-900">Monitoring Ujian</h1>
+                        ${appState.exams.length > 0 ? `
+                            <select onchange="appState.selectedMonitoringExamId=this.value; renderApp();" class="px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-semibold text-slate-700">
+                                ${appState.exams.map(ex => `<option value="${ex.id}" ${selectedExam && ex.id === selectedExam.id ? 'selected' : ''}>${ex.subject} (${ex.className})</option>`).join('')}
+                            </select>
+                        ` : ''}
+                    </div>
+                    <div class="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap gap-2.5">
+                        <input type="text" id="monitor-search-input" value="${mf.search}" oninput="setMonitorFilter('search', this.value)" placeholder="Cari nama atau username..." class="flex-1 min-w-[180px] px-3.5 py-2 rounded-xl border border-slate-200 text-xs">
+                        <select onchange="setMonitorFilter('status', this.value)" class="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-slate-50">
+                            <option value="ALL">Semua Status (${baseParticipants.length})</option>
+                            <option value="Belum Masuk" ${mf.status === 'Belum Masuk' ? 'selected' : ''}>Belum Masuk</option>
+                            <option value="Mengerjakan" ${mf.status === 'Mengerjakan' ? 'selected' : ''}>Mengerjakan</option>
+                            <option value="Terkunci" ${mf.status === 'Terkunci' ? 'selected' : ''}>Terkunci</option>
+                            <option value="Selesai" ${mf.status === 'Selesai' ? 'selected' : ''}>Selesai</option>
+                        </select>
+                        <button type="button" onclick="bulkResetParticipants()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs transition">
+                            Reset Massal
+                        </button>
+                    </div>
+                    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead><tr class="border-b border-slate-100 bg-slate-50 text-[11px] font-bold uppercase text-slate-400"><th class="py-3 px-4">NO</th><th class="py-3 px-4">NAMA</th><th class="py-3 px-4">KELAS</th><th class="py-3 px-4">STATUS</th><th class="py-3 px-4">PELANGGARAN</th><th class="py-3 px-4 text-right">AKSI</th></tr></thead>
+                                <tbody class="divide-y divide-slate-100 text-sm">
+                                    ${rows.length === 0 ? `<tr><td colspan="6" class="py-8 text-center text-xs text-slate-400">Tidak ada peserta ujian yang sesuai.</td></tr>` : rows.map((p, i) => {
+                                        const vCount = getEffectiveViolationCount(p);
+                                        const isLocked = p.status === 'Terkunci';
+                                        const isDone = p.status === 'Selesai';
+                                        const isWorking = p.status === 'Mengerjakan';
+                                        const statusBadge = isLocked
+                                            ? 'bg-rose-100 text-rose-700'
+                                            : isDone
+                                                ? 'bg-emerald-100 text-emerald-700'
+                                                : isWorking
+                                                    ? 'bg-indigo-100 text-indigo-700'
+                                                    : 'bg-slate-100 text-slate-600';
+                                        return `
+                                            <tr>
+                                                <td class="py-3 px-4 text-xs text-slate-400">${startIdx + i + 1}</td>
+                                                <td class="py-3 px-4 font-bold">${p.name} <span class="text-xs font-normal text-slate-400 block">${p.username}</span></td>
+                                                <td class="py-3 px-4 text-xs">${p.className} • ${p.room}</td>
+                                                <td class="py-3 px-4 text-xs"><span class="px-2.5 py-1 rounded-full font-bold ${statusBadge}">${p.status}</span></td>
+                                                <td class="py-3 px-4 text-xs">
+                                                    <span class="font-bold mr-1.5 ${vCount > 0 ? 'text-amber-600' : 'text-slate-400'}">${vCount}x</span>
+                                                    <button type="button" onclick="openParticipantHistory('${p.id}')" class="px-2 py-0.5 rounded-md bg-slate-100 hover:bg-amber-100 text-slate-700 font-semibold">Log</button>
+                                                </td>
+                                                <td class="py-3 px-4 text-right space-x-1">
+                                                    ${isLocked ? `<button type="button" onclick="unlockParticipant('${p.id}')" class="px-3 py-1 rounded-lg bg-emerald-600 text-white text-xs font-bold">Buka Kunci</button>` : ''}
+                                                    <button type="button" onclick="allowReentryParticipant('${p.id}')" class="px-2.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold">Reset</button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        ${renderPaginationControls(filtered.length, mf.page, mf.perPage, 'setMonitorPage', 'setMonitorPerPage')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPengaturanTab() {
+            const logoUrl = appState.settings.schoolLogo;
+            return `
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <div>
+                        <h1 class="text-2xl font-extrabold text-slate-900">Pengaturan Portal & Identitas Sekolah</h1>
+                        <p class="text-xs sm:text-sm text-slate-500 mt-1">Atur logo sekolah, identitas halaman login, kop kartu peserta, dan akun pengawas.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center text-center justify-between">
+                            <div class="w-full">
+                                <h2 class="text-sm font-bold text-slate-800 mb-1">Logo Sekolah</h2>
+                                <p class="text-[11px] text-slate-400 mb-4">Tampil di halaman masuk & kop kartu peserta.</p>
+                                <div class="w-28 h-28 mx-auto rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden p-2 mb-4">
+                                    ${logoUrl
+                                        ? `<img src="${logoUrl}" alt="Logo Sekolah" class="w-full h-full object-contain">`
+                                        : `<div class="text-slate-400 flex flex-col items-center"><i data-lucide="image" class="w-8 h-8 mb-1"></i><span class="text-[10px]">Belum ada logo</span></div>`
+                                    }
+                                </div>
+                            </div>
+                            <div class="w-full space-y-2">
+                                <label class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer transition">
+                                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                    <span>${logoUrl ? 'Ganti Logo' : 'Unggah Logo'}</span>
+                                    <input type="file" accept="image/*" onchange="handleSchoolLogoUpload(event)" class="hidden">
+                                </label>
+                                ${logoUrl ? `
+                                    <button type="button" onclick="removeSchoolLogo()" class="w-full px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition">
+                                        Hapus Logo
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <form onsubmit="saveSystemSettings(event)" class="md:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+                            <h2 class="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3">Identitas Sekolah & Tahun Pelajaran</h2>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1.5">Nama Sekolah</label>
+                                <input type="text" id="set-school-name" required value="${appState.settings.schoolName}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Judul Portal Ujian</label>
+                                    <input type="text" id="set-portal-title" required value="${appState.settings.portalTitle}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">Tahun Pelajaran</label>
+                                    <input type="text" id="set-academic-year" required value="${appState.settings.academicYear}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                                </div>
+                            </div>
+                            <div class="pt-2 flex justify-end">
+                                <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition">
+                                    Simpan Identitas
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+                        <h2 class="text-sm font-bold text-slate-800">Akun Admin & Pengawas Ruang</h2>
+                        <form onsubmit="addNewStaffUser(event)" class="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+                            <input type="text" id="new-staff-name" required placeholder="Nama Lengkap" class="px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                            <input type="text" id="new-staff-username" required placeholder="Username" class="px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                            <input type="text" id="new-staff-password" required placeholder="Password" class="px-3 py-2 rounded-xl border border-slate-200 text-xs">
+                            <select id="new-staff-role" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white">
+                                <option value="pengawas">Pengawas</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            <button type="submit" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs font-semibold transition">+ Tambah</button>
+                        </form>
+                        <div class="overflow-x-auto border border-slate-100 rounded-xl">
+                            <table class="w-full text-left border-collapse">
+                                <thead><tr class="bg-slate-50 border-b border-slate-100 text-[11px] font-bold uppercase text-slate-400"><th class="py-2.5 px-4">NAMA</th><th class="py-2.5 px-4">USERNAME</th><th class="py-2.5 px-4">PASSWORD</th><th class="py-2.5 px-4">PERAN</th><th class="py-2.5 px-4 text-right">AKSI</th></tr></thead>
+                                <tbody class="divide-y divide-slate-100 text-xs">
+                                    ${appState.staffUsers.map(st => `
+                                        <tr>
+                                            <td class="py-2.5 px-4 font-bold text-slate-800">${st.name}</td>
+                                            <td class="py-2.5 px-4 font-mono">${st.username}</td>
+                                            <td class="py-2.5 px-4 font-mono text-indigo-600">${st.password}</td>
+                                            <td class="py-2.5 px-4 uppercase font-semibold">${st.role}</td>
+                                            <td class="py-2.5 px-4 text-right">
+                                                <button type="button" onclick="removeStaffUser('${st.id}')" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-600 font-semibold">Hapus</button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        renderApp();
+        loadInitialSupabaseData();
+        setupSupabaseRealtime();
+    </script>
+</body>
+</html>
