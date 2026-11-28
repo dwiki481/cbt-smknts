@@ -77,17 +77,18 @@
     <!-- Dedicated Persistent Exam Wrapper -->
     <div id="persistent-exam-wrapper" class="hidden fixed inset-0 z-40 flex flex-col bg-[#F0EBF8]">
         <header class="bg-white border-b border-slate-200/80 px-4 sm:px-6 h-16 flex items-center justify-between shrink-0 shadow-2xs">
-            <div>
-                <div id="persistent-exam-subject" class="font-bold text-sm sm:text-base text-slate-900 leading-tight">Mata Pelajaran</div>
-                <div id="persistent-exam-student" class="text-[11px] text-slate-500">Siswa • Kelas</div>
+            <div class="min-w-0 pr-2">
+                <div id="persistent-exam-subject" class="font-bold text-sm sm:text-base text-slate-900 leading-tight truncate">Mata Pelajaran</div>
+                <div id="persistent-exam-student" class="text-[11px] text-slate-500 truncate">Siswa • Kelas</div>
             </div>
-            <div class="flex items-center gap-3 sm:gap-4">
+            <div class="flex items-center gap-3 sm:gap-4 shrink-0">
                 <div class="text-right">
                     <div class="text-[9px] font-bold tracking-wider uppercase text-slate-400">SISA WAKTU</div>
                     <div id="student-timer-display" class="font-mono font-bold text-sm sm:text-base text-slate-900 leading-tight">00:00:00</div>
                 </div>
-                <button type="button" onclick="openFinishExamModal()" class="px-3.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 font-semibold text-xs transition">
-                    Selesai
+                <button type="button" onclick="openFinishExamModal()" class="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs sm:text-sm tracking-wide uppercase shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400/50 transition-all cursor-pointer">
+                    <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i>
+                    <span>SELESAI</span>
                 </button>
             </div>
         </header>
@@ -99,7 +100,7 @@
 
         <div class="bg-[#FFFBEB] border-b border-amber-200/70 px-4 py-1.5 text-center flex items-center justify-center gap-2 text-[11px] sm:text-xs text-amber-800 shrink-0">
             <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
-            <span>Mode ujian aktif — jangan keluar layar penuh, belah layar (split-screen), atau pindah tab. Pastikan menekan <strong>Kirim (Submit)</strong> di Google Form sebelum menekan Selesai.</span>
+            <span>Mode ujian aktif — jangan keluar layar penuh atau pindah tab. Setelah menekan <strong>Kirim (Submit)</strong> di Google Form, tekan tombol hijau <strong>SELESAI</strong> di pojok kanan atas.</span>
         </div>
 
         <div id="persistent-iframe-container" class="flex-1 w-full max-w-4xl mx-auto my-3 px-3 sm:px-0 flex flex-col overflow-hidden"></div>
@@ -908,12 +909,10 @@
             }
         }
 
-        // Polling ringan khusus untuk siswa yang sedang aktif (menggantikan Realtime agar kuat 400+ siswa)
         function startStudentStatusPolling() {
             stopStudentPolling();
             if (!supabaseClient || !session.activeStudentId || session.view === 'proctor') return;
 
-            // Interval 25 detik + jitter acak 0-5 detik agar request siswa tersebar rata
             const pollIntervalMs = 25000 + Math.floor(Math.random() * 5000);
             studentStatusPollTimer = setInterval(async () => {
                 if (!session.activeStudentId || session.view === 'proctor' || session.view === 'login') {
@@ -935,7 +934,6 @@
                             student.violations = data.violations || 0;
                             student.maxViolations = data.max_violations || 3;
 
-                            // Jika pengawas membuka kunci atau mereset siswa dari dashboard pengawas
                             if (prevStatus === 'Terkunci' && data.status !== 'Terkunci') {
                                 checkStudentLockState();
                                 showToast('Kunci ujian Anda telah dibuka oleh pengawas.', 'success');
@@ -951,9 +949,7 @@
                             }
                         }
                     }
-                } catch (err) {
-                    // Abaikan gangguan jaringan sesaat agar ujian siswa tidak terganggu
-                }
+                } catch (err) {}
             }, pollIntervalMs);
         }
 
@@ -965,7 +961,6 @@
             }
 
             try {
-                // 1. Pengaturan Sekolah (gunakan cache lokal jika tersedia untuk meringankan DB saat 400 siswa masuk)
                 const cachedSettings = localStorage.getItem(LOCAL_SETTINGS_KEY);
                 if (!cachedSettings || session.view === 'proctor') {
                     const { data: settingsData } = await supabaseClient.from('school_settings').select('*').eq('id', 'main').maybeSingle();
@@ -981,7 +976,6 @@
                 }
                 document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
 
-                // 2. Jadwal Ujian (hanya tarik metadata jadwal jika bukan staf)
                 const examCols = session.view === 'proctor'
                     ? '*'
                     : 'id, subject, class_name, date_str, session_str, status, duration_seconds, max_violations';
@@ -994,7 +988,6 @@
                     evaluateScheduledExamStatuses();
                 }
 
-                // 3. Data sesuai peran
                 await fetchParticipantsByRole();
             } catch (err) {
                 console.warn('Supabase init error:', err);
@@ -1029,7 +1022,6 @@
                 const { data: singleData } = await supabaseClient.from('participants').select('*').eq('id', session.activeStudentId).maybeSingle();
                 if (singleData) {
                     const mapped = mapParticipantRow(singleData);
-                    // Pulihkan sisa waktu dari cache lokal jika lebih baru dan status masih Mengerjakan
                     const cached = getStudentLocalCache();
                     if (cached && cached.id === mapped.id && cached.examId === mapped.examId && mapped.status === 'Mengerjakan') {
                         if (typeof cached.remainingSeconds === 'number' && cached.remainingSeconds < mapped.remainingSeconds && cached.remainingSeconds > 0) {
@@ -1045,7 +1037,6 @@
             }
         }
 
-        // Realtime HANYA aktif untuk Pengawas / Admin agar 400 siswa tidak menghabiskan kuota koneksi WebSocket
         function setupSupabaseRealtime() {
             if (!supabaseClient) return;
             teardownRealtimeChannel();
@@ -1304,7 +1295,6 @@
         function acknowledgeViolation() {
             session.violationModalOpen = false;
             document.getElementById('violation-modal').classList.add('hidden');
-            resetViewportBaseline();
             requestExamFullscreen();
         }
 
@@ -1344,50 +1334,6 @@
             }
         });
 
-        // =========================================================================
-        // DETEKSI ANTI SPLIT-SCREEN & FLOATING WINDOW (HP / TABLET / PC)
-        // =========================================================================
-        let baselineWidth = window.innerWidth;
-        let baselineHeight = window.innerHeight;
-
-        function resetViewportBaseline() {
-            baselineWidth = Math.max(window.innerWidth, window.screen.availWidth || window.innerWidth);
-            baselineHeight = Math.max(window.innerHeight, window.screen.availHeight || window.innerHeight);
-        }
-
-        function checkSplitScreenViolation() {
-            if (session.view !== 'student_exam' || session.violationModalOpen) return;
-
-            const currentW = window.innerWidth;
-            const currentH = window.innerHeight;
-            const screenW = window.screen.availWidth || baselineWidth;
-            const screenH = window.screen.availHeight || baselineHeight;
-
-            const isRotated = (currentW > currentH) !== (baselineWidth > baselineHeight);
-            if (isRotated) {
-                baselineWidth = currentW;
-                baselineHeight = currentH;
-                return;
-            }
-
-            const widthRatio = currentW / screenW;
-            const heightRatio = currentH / screenH;
-
-            if (widthRatio < 0.75 || heightRatio < 0.75) {
-                triggerViolation('Terdeteksi mode layar terbelah (Split-Screen) atau jendela melayang');
-            }
-        }
-
-        window.addEventListener('resize', () => {
-            checkSplitScreenViolation();
-        });
-
-        setInterval(() => {
-            if (session.view === 'student_exam') {
-                checkSplitScreenViolation();
-            }
-        }, 2000);
-
         // Timer Ujian Siswa: simpan lokal setiap 1 detik, sinkron ke Supabase tiap 3 menit + jitter acak
         setInterval(() => {
             evaluateScheduledExamStatuses();
@@ -1404,7 +1350,6 @@
                             if (bannerEl) bannerEl.classList.remove('hidden');
                         }
 
-                        // Kirim timer ke Supabase setiap 180 detik (3 menit) dengan offset jitter per siswa
                         if ((student.remainingSeconds + CLIENT_SYNC_JITTER) % 180 === 0) {
                             updateParticipantTimerOnly(student);
                         }
@@ -1518,7 +1463,6 @@
             if (submitBtn) submitBtn.disabled = true;
 
             try {
-                // Jitter mikro acak (0-750ms) agar 400 siswa yang menekan Mulai bersamaan tidak menghantam DB di milidetik yang sama
                 await sleep(Math.floor(Math.random() * 750));
 
                 let exam = appState.exams.find(ex => ex.id === examId);
@@ -1563,7 +1507,6 @@
                 saveState();
                 checkStudentLockState();
                 renderApp();
-                resetViewportBaseline();
                 requestExamFullscreen();
                 showToast(`Token valid! Memulai ujian ${exam.subject}.`, 'success');
             } finally {
@@ -2108,7 +2051,6 @@
             });
 
             if (supabaseClient && targetIds.length > 0) {
-                // Pecah per batch 100 ID agar URL query tidak kepanjangan saat 400 siswa direset sekaligus
                 const chunkSize = 100;
                 for (let i = 0; i < targetIds.length; i += chunkSize) {
                     const chunk = targetIds.slice(i, i + chunkSize);
@@ -2486,7 +2428,6 @@
                     if (newClassesToInsert.length > 0) {
                         await supabaseClient.from('classes').upsert(newClassesToInsert, { onConflict: 'id' });
                     }
-                    // Pecah batch upsert per 150 siswa agar aman mengimpor 400-1000+ siswa sekaligus
                     const chunkSize = 150;
                     for (let i = 0; i < rowsToUpsert.length; i += chunkSize) {
                         const chunk = rowsToUpsert.slice(i, i + chunkSize);
