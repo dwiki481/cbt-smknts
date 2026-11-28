@@ -99,7 +99,7 @@
 
         <div class="bg-[#FFFBEB] border-b border-amber-200/70 px-4 py-1.5 text-center flex items-center justify-center gap-2 text-[11px] sm:text-xs text-amber-800 shrink-0">
             <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
-            <span>Mode ujian aktif — jangan keluar layar penuh atau pindah tab. Pastikan menekan <strong>Kirim (Submit)</strong> di Google Form sebelum menekan Selesai.</span>
+            <span>Mode ujian aktif — jangan keluar layar penuh, belah layar (split-screen), atau pindah tab. Pastikan menekan <strong>Kirim (Submit)</strong> di Google Form sebelum menekan Selesai.</span>
         </div>
 
         <div id="persistent-iframe-container" class="flex-1 w-full max-w-4xl mx-auto my-3 px-3 sm:px-0 flex flex-col overflow-hidden"></div>
@@ -436,18 +436,26 @@
 
     <script>
         // =========================================================================
-        // 1. KONFIGURASI SUPABASE
+        // 1. KONFIGURASI SUPABASE & OPTIMASI KONKURENSI 400+ SISWA
         // =========================================================================
         const SUPABASE_URL = "https://mvafpjvoktzropiespws.supabase.co";
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12YWZwanZva3R6cm9waWVzcHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU3Nzg1NTgsImV4cCI6MjExMTM1NDU1OH0.9WGU1jvwjhJamuaGYsfL3pshKDJnTuRZ9WqpEG1gBDI";
 
         let supabaseClient = null;
         if (window.supabase && SUPABASE_URL.startsWith("https://")) {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+                realtime: {
+                    params: { eventsPerSecond: 10 }
+                }
+            });
         }
 
-        const SESSION_KEY = 'portal_ujian_session_supabase_v2';
-        const LOCAL_SETTINGS_KEY = 'portal_ujian_settings_supabase_v2';
+        const SESSION_KEY = 'portal_ujian_session_supabase_v4';
+        const LOCAL_SETTINGS_KEY = 'portal_ujian_settings_supabase_v4';
+        const STUDENT_CACHE_KEY = 'portal_ujian_student_cache_v4';
+
+        // Jitter acak per browser (0-180 detik) agar 400 siswa tidak mengirim update timer di detik yang sama
+        const CLIENT_SYNC_JITTER = Math.floor(Math.random() * 180);
 
         let session = {
             view: 'login',
@@ -477,6 +485,10 @@
             exams: [],
             participants: []
         };
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
 
         function normalizeClassKey(str) {
             return (str || '').toString().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -517,7 +529,7 @@
             });
         }
 
-        // Render Debounce (jeda 450ms) agar klik tombol tidak pernah terputus saat ratusan siswa online
+        // Render Debounce (600ms) agar UI pengawas tetap responsif walau ada ratusan update masuk
         let renderDebounceTimer = null;
         function safeRenderApp(force = false) {
             if (!force) {
@@ -527,7 +539,7 @@
                     if (!isTypingInLoginForm() && !isAnyModalOpen()) {
                         renderApp();
                     }
-                }, 450);
+                }, 600);
                 return;
             }
             clearTimeout(renderDebounceTimer);
@@ -571,6 +583,35 @@
                     </div>
                 </div>
             `;
+        }
+
+        function saveStudentLocalCache(student) {
+            if (!student) return;
+            try {
+                localStorage.setItem(STUDENT_CACHE_KEY, JSON.stringify({
+                    id: student.id,
+                    examId: student.examId,
+                    remainingSeconds: student.remainingSeconds,
+                    status: student.status,
+                    violations: student.violations,
+                    savedAt: Date.now()
+                }));
+            } catch (e) {}
+        }
+
+        function getStudentLocalCache() {
+            try {
+                const raw = localStorage.getItem(STUDENT_CACHE_KEY);
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function clearStudentLocalCache() {
+            try {
+                localStorage.removeItem(STUDENT_CACHE_KEY);
+            } catch (e) {}
         }
 
         function loadSessionState() {
@@ -703,6 +744,7 @@
             if (!supabaseClient || !p) return;
             const effectiveViolations = getEffectiveViolationCount(p);
             p.violations = effectiveViolations;
+            saveStudentLocalCache(p);
             const { error } = await supabaseClient.from('participants').update({
                 name: p.name,
                 username: p.username,
@@ -847,9 +889,73 @@
         }
 
         // =========================================================================
-        // 3. MUAT DATA AWAL & SUPABASE REALTIME SUBSCRIPTION
+        // 3. MUAT DATA AWAL, REALTIME KHUSUS PENGAWAS, & POLLING RINGAN SISWA
         // =========================================================================
         let realtimeChannel = null;
+        let studentStatusPollTimer = null;
+
+        function teardownRealtimeChannel() {
+            if (supabaseClient && realtimeChannel) {
+                supabaseClient.removeChannel(realtimeChannel);
+                realtimeChannel = null;
+            }
+        }
+
+        function stopStudentPolling() {
+            if (studentStatusPollTimer) {
+                clearInterval(studentStatusPollTimer);
+                studentStatusPollTimer = null;
+            }
+        }
+
+        // Polling ringan khusus untuk siswa yang sedang aktif (menggantikan Realtime agar kuat 400+ siswa)
+        function startStudentStatusPolling() {
+            stopStudentPolling();
+            if (!supabaseClient || !session.activeStudentId || session.view === 'proctor') return;
+
+            // Interval 25 detik + jitter acak 0-5 detik agar request siswa tersebar rata
+            const pollIntervalMs = 25000 + Math.floor(Math.random() * 5000);
+            studentStatusPollTimer = setInterval(async () => {
+                if (!session.activeStudentId || session.view === 'proctor' || session.view === 'login') {
+                    stopStudentPolling();
+                    return;
+                }
+                try {
+                    const { data } = await supabaseClient
+                        .from('participants')
+                        .select('id, status, violations, max_violations, remaining_seconds, exam_id')
+                        .eq('id', session.activeStudentId)
+                        .maybeSingle();
+
+                    if (data) {
+                        const student = appState.participants.find(p => p.id === data.id);
+                        if (student) {
+                            const prevStatus = student.status;
+                            student.status = data.status;
+                            student.violations = data.violations || 0;
+                            student.maxViolations = data.max_violations || 3;
+
+                            // Jika pengawas membuka kunci atau mereset siswa dari dashboard pengawas
+                            if (prevStatus === 'Terkunci' && data.status !== 'Terkunci') {
+                                checkStudentLockState();
+                                showToast('Kunci ujian Anda telah dibuka oleh pengawas.', 'success');
+                                safeRenderApp(true);
+                            } else if (prevStatus !== 'Terkunci' && data.status === 'Terkunci') {
+                                checkStudentLockState();
+                                safeRenderApp(true);
+                            } else if (data.status === 'Belum Masuk' && prevStatus === 'Mengerjakan') {
+                                student.remainingSeconds = data.remaining_seconds;
+                                clearStudentLocalCache();
+                                backToStudentDashboard();
+                                showToast('Sesi ujian Anda direset oleh pengawas.', 'warning');
+                            }
+                        }
+                    }
+                } catch (err) {
+                    // Abaikan gangguan jaringan sesaat agar ujian siswa tidak terganggu
+                }
+            }, pollIntervalMs);
+        }
 
         async function loadInitialSupabaseData() {
             if (!supabaseClient) {
@@ -859,20 +965,23 @@
             }
 
             try {
-                // 1. Pengaturan Sekolah
-                const { data: settingsData } = await supabaseClient.from('school_settings').select('*').eq('id', 'main').maybeSingle();
-                if (settingsData) {
-                    appState.settings = {
-                        schoolName: settingsData.school_name || appState.settings.schoolName,
-                        portalTitle: settingsData.portal_title || appState.settings.portalTitle,
-                        academicYear: settingsData.academic_year || appState.settings.academicYear,
-                        schoolLogo: settingsData.school_logo ?? appState.settings.schoolLogo
-                    };
-                    localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(appState.settings));
-                    document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
+                // 1. Pengaturan Sekolah (gunakan cache lokal jika tersedia untuk meringankan DB saat 400 siswa masuk)
+                const cachedSettings = localStorage.getItem(LOCAL_SETTINGS_KEY);
+                if (!cachedSettings || session.view === 'proctor') {
+                    const { data: settingsData } = await supabaseClient.from('school_settings').select('*').eq('id', 'main').maybeSingle();
+                    if (settingsData) {
+                        appState.settings = {
+                            schoolName: settingsData.school_name || appState.settings.schoolName,
+                            portalTitle: settingsData.portal_title || appState.settings.portalTitle,
+                            academicYear: settingsData.academic_year || appState.settings.academicYear,
+                            schoolLogo: settingsData.school_logo ?? appState.settings.schoolLogo
+                        };
+                        localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(appState.settings));
+                    }
                 }
+                document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
 
-                // 2. Jadwal Ujian (jika belum login staf, jangan tarik token & gform_url)
+                // 2. Jadwal Ujian (hanya tarik metadata jadwal jika bukan staf)
                 const examCols = session.view === 'proctor'
                     ? '*'
                     : 'id, subject, class_name, date_str, session_str, status, duration_seconds, max_violations';
@@ -920,36 +1029,32 @@
                 const { data: singleData } = await supabaseClient.from('participants').select('*').eq('id', session.activeStudentId).maybeSingle();
                 if (singleData) {
                     const mapped = mapParticipantRow(singleData);
+                    // Pulihkan sisa waktu dari cache lokal jika lebih baru dan status masih Mengerjakan
+                    const cached = getStudentLocalCache();
+                    if (cached && cached.id === mapped.id && cached.examId === mapped.examId && mapped.status === 'Mengerjakan') {
+                        if (typeof cached.remainingSeconds === 'number' && cached.remainingSeconds < mapped.remainingSeconds && cached.remainingSeconds > 0) {
+                            mapped.remainingSeconds = cached.remainingSeconds;
+                        }
+                    }
                     const idx = appState.participants.findIndex(p => p.id === mapped.id);
                     if (idx >= 0) appState.participants[idx] = mapped;
                     else appState.participants.push(mapped);
                     checkStudentLockState();
+                    startStudentStatusPolling();
                 }
             }
         }
 
+        // Realtime HANYA aktif untuk Pengawas / Admin agar 400 siswa tidak menghabiskan kuota koneksi WebSocket
         function setupSupabaseRealtime() {
             if (!supabaseClient) return;
-            if (realtimeChannel) {
-                supabaseClient.removeChannel(realtimeChannel);
-                realtimeChannel = null;
+            teardownRealtimeChannel();
+
+            if (session.view !== 'proctor') {
+                return;
             }
 
-            realtimeChannel = supabaseClient.channel('cbt-realtime-channel')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'school_settings' }, payload => {
-                    if (payload.new && payload.new.id === 'main') {
-                        const s = payload.new;
-                        appState.settings = {
-                            schoolName: s.school_name || appState.settings.schoolName,
-                            portalTitle: s.portal_title || appState.settings.portalTitle,
-                            academicYear: s.academic_year || appState.settings.academicYear,
-                            schoolLogo: s.school_logo ?? appState.settings.schoolLogo
-                        };
-                        localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(appState.settings));
-                        document.title = `${appState.settings.portalTitle} — ${appState.settings.schoolName}`;
-                        safeRenderApp();
-                    }
-                })
+            realtimeChannel = supabaseClient.channel('cbt-proctor-realtime')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'exams' }, payload => {
                     if (payload.eventType === 'DELETE') {
                         if (payload.old && payload.old.id) {
@@ -957,10 +1062,6 @@
                         }
                     } else if (payload.new) {
                         const mapped = mapExamRow(payload.new);
-                        if (session.view !== 'proctor') {
-                            mapped.token = '';
-                            mapped.gformUrl = '';
-                        }
                         const idx = appState.exams.findIndex(e => e.id === mapped.id);
                         if (idx >= 0) appState.exams[idx] = mapped;
                         else appState.exams.push(mapped);
@@ -968,46 +1069,30 @@
                     evaluateScheduledExamStatuses();
                     safeRenderApp();
                 })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'classes' }, payload => {
-                    if (session.view !== 'proctor') return;
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, payload => {
                     if (payload.eventType === 'DELETE') {
                         if (payload.old && payload.old.id) {
-                            appState.classes = appState.classes.filter(c => c.id !== payload.old.id);
+                            appState.participants = appState.participants.filter(p => p.id !== payload.old.id);
                         }
                     } else if (payload.new) {
-                        const mapped = { id: payload.new.id, name: payload.new.name, gradeLevel: payload.new.grade_level || '' };
-                        const idx = appState.classes.findIndex(c => c.id === mapped.id);
-                        if (idx >= 0) appState.classes[idx] = mapped;
-                        else appState.classes.push(mapped);
-                    }
-                    safeRenderApp();
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'participants' }, payload => {
-                    if (session.view === 'proctor') {
-                        if (payload.eventType === 'DELETE') {
-                            if (payload.old && payload.old.id) {
-                                appState.participants = appState.participants.filter(p => p.id !== payload.old.id);
-                            }
-                        } else if (payload.new) {
-                            const mapped = mapParticipantRow(payload.new);
-                            const idx = appState.participants.findIndex(p => p.id === mapped.id);
-                            if (idx >= 0) appState.participants[idx] = mapped;
-                            else appState.participants.push(mapped);
-                        }
-                        safeRenderApp();
-                    } else if (session.activeStudentId && payload.new && payload.new.id === session.activeStudentId) {
                         const mapped = mapParticipantRow(payload.new);
                         const idx = appState.participants.findIndex(p => p.id === mapped.id);
                         if (idx >= 0) appState.participants[idx] = mapped;
                         else appState.participants.push(mapped);
-                        checkStudentLockState();
-                        safeRenderApp();
                     }
+                    safeRenderApp();
                 })
                 .subscribe();
         }
 
         function syncRoleBasedListeners() {
+            if (session.view === 'proctor') {
+                stopStudentPolling();
+                setupSupabaseRealtime();
+            } else {
+                teardownRealtimeChannel();
+                startStudentStatusPolling();
+            }
             fetchParticipantsByRole().then(() => safeRenderApp(true));
         }
 
@@ -1219,6 +1304,7 @@
         function acknowledgeViolation() {
             session.violationModalOpen = false;
             document.getElementById('violation-modal').classList.add('hidden');
+            resetViewportBaseline();
             requestExamFullscreen();
         }
 
@@ -1258,6 +1344,51 @@
             }
         });
 
+        // =========================================================================
+        // DETEKSI ANTI SPLIT-SCREEN & FLOATING WINDOW (HP / TABLET / PC)
+        // =========================================================================
+        let baselineWidth = window.innerWidth;
+        let baselineHeight = window.innerHeight;
+
+        function resetViewportBaseline() {
+            baselineWidth = Math.max(window.innerWidth, window.screen.availWidth || window.innerWidth);
+            baselineHeight = Math.max(window.innerHeight, window.screen.availHeight || window.innerHeight);
+        }
+
+        function checkSplitScreenViolation() {
+            if (session.view !== 'student_exam' || session.violationModalOpen) return;
+
+            const currentW = window.innerWidth;
+            const currentH = window.innerHeight;
+            const screenW = window.screen.availWidth || baselineWidth;
+            const screenH = window.screen.availHeight || baselineHeight;
+
+            const isRotated = (currentW > currentH) !== (baselineWidth > baselineHeight);
+            if (isRotated) {
+                baselineWidth = currentW;
+                baselineHeight = currentH;
+                return;
+            }
+
+            const widthRatio = currentW / screenW;
+            const heightRatio = currentH / screenH;
+
+            if (widthRatio < 0.75 || heightRatio < 0.75) {
+                triggerViolation('Terdeteksi mode layar terbelah (Split-Screen) atau jendela melayang');
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            checkSplitScreenViolation();
+        });
+
+        setInterval(() => {
+            if (session.view === 'student_exam') {
+                checkSplitScreenViolation();
+            }
+        }, 2000);
+
+        // Timer Ujian Siswa: simpan lokal setiap 1 detik, sinkron ke Supabase tiap 3 menit + jitter acak
         setInterval(() => {
             evaluateScheduledExamStatuses();
             if (session.view === 'student_exam') {
@@ -1265,14 +1396,19 @@
                 if (student && student.status === 'Mengerjakan' && !session.violationModalOpen) {
                     if (student.remainingSeconds > 0) {
                         student.remainingSeconds -= 1;
+                        saveStudentLocalCache(student);
+
                         if (student.remainingSeconds === 60) {
                             showToast('PERINGATAN: Sisa waktu ujian tinggal 1 menit!', 'danger');
                             const bannerEl = document.getElementById('one-minute-warning-banner');
                             if (bannerEl) bannerEl.classList.remove('hidden');
                         }
-                        if (student.remainingSeconds % 60 === 0) {
+
+                        // Kirim timer ke Supabase setiap 180 detik (3 menit) dengan offset jitter per siswa
+                        if ((student.remainingSeconds + CLIENT_SYNC_JITTER) % 180 === 0) {
                             updateParticipantTimerOnly(student);
                         }
+
                         const timerEl = document.getElementById('student-timer-display');
                         if (timerEl) {
                             timerEl.textContent = formatTimeHMS(student.remainingSeconds);
@@ -1382,6 +1518,9 @@
             if (submitBtn) submitBtn.disabled = true;
 
             try {
+                // Jitter mikro acak (0-750ms) agar 400 siswa yang menekan Mulai bersamaan tidak menghantam DB di milidetik yang sama
+                await sleep(Math.floor(Math.random() * 750));
+
                 let exam = appState.exams.find(ex => ex.id === examId);
                 if (supabaseClient) {
                     const freshExam = await fetchSingleExamById(examId);
@@ -1424,6 +1563,7 @@
                 saveState();
                 checkStudentLockState();
                 renderApp();
+                resetViewportBaseline();
                 requestExamFullscreen();
                 showToast(`Token valid! Memulai ujian ${exam.subject}.`, 'success');
             } finally {
@@ -1443,6 +1583,8 @@
         }
 
         function logoutStudent() {
+            stopStudentPolling();
+            clearStudentLocalCache();
             session.view = 'login';
             session.activeStudentId = null;
             session.activeExamId = null;
@@ -1506,6 +1648,7 @@
         }
 
         function logoutProctor() {
+            teardownRealtimeChannel();
             session.view = 'login';
             session.loginTab = 'staf';
             appState.staffUsers = [];
@@ -1965,22 +2108,27 @@
             });
 
             if (supabaseClient && targetIds.length > 0) {
-                const { error } = await supabaseClient
-                    .from('participants')
-                    .update({
-                        status: 'Belum Masuk',
-                        violations: 0,
-                        violation_logs: [],
-                        last_violation_reason: '',
-                        remaining_seconds: defaultDuration,
-                        last_active: 'Direset massal pengawas',
-                        updated_at: new Date().toISOString()
-                    })
-                    .in('id', targetIds);
+                // Pecah per batch 100 ID agar URL query tidak kepanjangan saat 400 siswa direset sekaligus
+                const chunkSize = 100;
+                for (let i = 0; i < targetIds.length; i += chunkSize) {
+                    const chunk = targetIds.slice(i, i + chunkSize);
+                    const { error } = await supabaseClient
+                        .from('participants')
+                        .update({
+                            status: 'Belum Masuk',
+                            violations: 0,
+                            violation_logs: [],
+                            last_violation_reason: '',
+                            remaining_seconds: defaultDuration,
+                            last_active: 'Direset massal pengawas',
+                            updated_at: new Date().toISOString()
+                        })
+                        .in('id', chunk);
 
-                if (error) {
-                    showToast('Gagal reset massal di Supabase: ' + error.message, 'danger');
-                    return;
+                    if (error) {
+                        showToast('Gagal reset massal di Supabase: ' + error.message, 'danger');
+                        return;
+                    }
                 }
             }
 
@@ -2338,8 +2486,11 @@
                     if (newClassesToInsert.length > 0) {
                         await supabaseClient.from('classes').upsert(newClassesToInsert, { onConflict: 'id' });
                     }
-                    if (rowsToUpsert.length > 0) {
-                        const { error } = await supabaseClient.from('participants').upsert(rowsToUpsert, { onConflict: 'id' });
+                    // Pecah batch upsert per 150 siswa agar aman mengimpor 400-1000+ siswa sekaligus
+                    const chunkSize = 150;
+                    for (let i = 0; i < rowsToUpsert.length; i += chunkSize) {
+                        const chunk = rowsToUpsert.slice(i, i + chunkSize);
+                        const { error } = await supabaseClient.from('participants').upsert(chunk, { onConflict: 'id' });
                         if (error) {
                             showToast('Gagal import ke Supabase: ' + error.message, 'danger');
                             return;
@@ -2374,6 +2525,7 @@
             if (!student) return;
             student.status = 'Selesai';
             student.lastActive = 'Baru saja';
+            clearStudentLocalCache();
             updateParticipantInSupabase(student);
             if (document.fullscreenElement && document.exitFullscreen) {
                 document.exitFullscreen().catch(() => {});
